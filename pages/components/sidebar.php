@@ -10,7 +10,9 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <div class="sidebar-profile">
         <img src="../backend/storage/assets/logo.png" alt="Profile"> 
         <div>
-            <h5><?= htmlspecialchars($currentUserName) ?></h5>
+            <a href="profile.php" style="color: inherit; text-decoration: none;">
+                <h5><?= htmlspecialchars($currentUserName) ?></h5>
+            </a>
             <small style="opacity: 0.8; font-size: 0.7rem;">
                 <?= $isSuperAdmin ? 'SUPER ADMIN' : strtoupper($currentUserRole) ?>
             </small>
@@ -76,16 +78,3 @@ $current_page = basename($_SERVER['PHP_SELF']);
         </div>
     </div>
 </div>
-
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        var toggleBtn = document.getElementById("sidebarToggleBtn");
-        var wrapper = document.querySelector(".dashboard-wrapper");
-
-        if (toggleBtn && wrapper) {
-            toggleBtn.addEventListener("click", function() {
-                wrapper.classList.toggle("toggled");
-            });
-        }
-    });
-</script>
