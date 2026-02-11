@@ -61,7 +61,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
+            <div class="modal-header text-white" style="background: linear-gradient(180deg, #a71b1b 0%, #880f0b 100%);">
                 <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -70,7 +70,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
             </div>
             <div class="modal-footer justify-content-center">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <a href="../logout.php" class="btn btn-danger">Yes, Log Out</a>
+                <a href="../logout.php" class="btn text-white" style="background-color: #880f0b;">Yes, Log Out</a>
             </div>
         </div>
     </div>

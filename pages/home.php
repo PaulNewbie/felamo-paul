@@ -17,12 +17,11 @@ $isSuperAdmin = $user['role'] === 'super_admin';
         min-height: 100vh; 
         width: 100%; 
         overflow-x: hidden; 
-        transition: all 0.3s ease;
     }
 
-    /* --- SIDEBAR STYLES (NUCLEAR FIX) --- */
+    /* --- SIDEBAR STYLES (SMOOTH SLIDE FIX) --- */
     .sidebar { 
-        width: 280px !important;            /* Force fixed width */
+        width: 280px !important;
         background: linear-gradient(180deg, #a71b1b 0%, #880f0b 100%); 
         color: white; 
         display: flex; 
@@ -30,51 +29,68 @@ $isSuperAdmin = $user['role'] === 'super_admin';
         padding: 20px; 
         position: fixed; 
         height: 100vh; 
-        z-index: 9000 !important;           /* Very high Z-Index */
+        z-index: 9000 !important;
         left: 0 !important; 
-        transition: left 0.3s ease !important; 
-        overflow: visible !important;       /* CRITICAL: Lets the button stick out */
+        top: 0;
+        
+        /* USE TRANSFORM FOR SMOOTH SLIDING */
+        transform: translateX(0);
+        transition: transform 0.3s ease-in-out; 
+        
+        overflow: visible !important;
     }
 
-    /* --- BUTTON STYLES (THE YELLOW ARROW) --- */
+    /* --- BUTTON STYLES --- */
     .sidebar-toggle { 
         position: absolute !important;
-        right: -30px !important;            /* Sticks out 30px to the right */
+        right: -30px !important;
         top: 50% !important;
         width: 30px !important; 
         height: 60px !important; 
-        background-color: #FFC107 !important; /* Bright Yellow */
-        border: 2px solid #880f0b !important; /* Red Border to make it pop */
+        background-color: #FFC107 !important;
+        border: 2px solid #880f0b !important;
         border-left: none !important;
         border-radius: 0 8px 8px 0 !important; 
         display: flex !important; 
         align-items: center; 
         justify-content: center; 
         cursor: pointer; 
-        color: #000 !important;             /* Black Arrow */
-        z-index: 9999 !important;           /* HIGHEST Z-Index (Above Sidebar) */
+        color: #000 !important;
+        z-index: 9999 !important;
         box-shadow: 4px 0 5px rgba(0,0,0,0.2) !important;
     }
-
-    /* --- CLOSED STATE (WHEN YOU CLICK) --- */
-    /* 1. Move Sidebar completely off screen (-280px) */
-    .dashboard-wrapper.toggled .sidebar { 
-        left: -280px !important; 
+    
+    /* Smooth arrow rotation */
+    .sidebar-toggle i {
+        transition: transform 0.3s ease-in-out;
     }
 
-    /* 2. Since button is 'right: -30px', it will sit at screen edge (0px to 30px) */
-    
-    /* 3. Adjust Content Margin */
+    /* --- CLOSED STATE (TRANSFORM LOGIC) --- */
+    .dashboard-wrapper.toggled .sidebar { 
+        /* Move sidebar to the left by its own width */
+        transform: translateX(-280px); 
+    }
+
     .dashboard-wrapper.toggled .main-content { 
+        /* Remove margin so content expands */
         margin-left: 0 !important; 
     }
 
-    /* 4. Flip the arrow */
     .dashboard-wrapper.toggled .sidebar-toggle i { 
         transform: rotate(180deg); 
     }
 
-    /* --- REST OF DASHBOARD STYLES --- */
+    /* --- MAIN CONTENT --- */
+    .main-content { 
+        flex: 1; 
+        margin-left: 280px; /* Default open state margin */
+        padding: 30px 40px; 
+        
+        /* Animate the margin change */
+        transition: margin-left 0.3s ease-in-out; 
+    }
+
+    /* --- REST OF DASHBOARD STYLES (UNCHANGED) --- */
     .sidebar-profile { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.5); }
     .sidebar-profile img { width: 80px !important; height: 80px !important; border-radius: 50%; object-fit: cover; border: 2px solid white; max-width: 100%; display: block; }
     .sidebar-profile h5 { font-weight: bold; margin: 0; font-size: 1.2rem; text-transform: uppercase; }
@@ -87,14 +103,19 @@ $isSuperAdmin = $user['role'] === 'super_admin';
     .logout-btn { margin-top: auto; background-color: #FFC107; color: black; font-weight: bold; border: none; width: 100%; padding: 12px; border-radius: 25px; text-align: center; text-decoration: none; cursor: pointer; }
     .logout-btn:hover { background-color: #e0a800; color: black; }
 
-    .main-content { flex: 1; margin-left: 280px; padding: 30px 40px; transition: all 0.3s ease; }
     .page-header { background: linear-gradient(180deg, #a71b1b 0%, #880f0b 100%); color: white; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 1.5rem; margin-bottom: 20px; text-transform: uppercase; }
     .stats-card { border: none; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); height: 100%; transition: transform 0.3s ease, box-shadow 0.3s ease; cursor: pointer; }
-    .stats-card:hover { transform: translateY(-8px); box-shadow: 0 12px 20px rgba(255, 0, 0, 0.4); }
+    .stats-card:hover { transform: translateY(-8px); box-shadow: 0 12px 20px rgb(144, 5, 5); }
     .stats-header { background: linear-gradient(180deg, #880f0b 0%, #ce3c3c 100%); color: white; padding: 10px; text-align: center; font-weight: bold; font-size: 1.1rem; }
     .stats-body { background-color: #e5e5e5; padding: 20px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 150px; shadow: #880f0b;}
     .stats-label { font-size: 0.9rem; font-weight: bold; color: #333; margin-bottom: 5px; }
     .stats-count { font-size: 3.5rem; font-weight: bold; color: #880f0b; line-height: 1; }
+    
+    @media print {
+        .sidebar, .action-buttons, .sidebar-toggle { display: none !important; }
+        .main-content { margin-left: 0 !important; width: 100%; }
+        .page-header { -webkit-print-color-adjust: exact; }
+    }
 </style>
 
 <div class="dashboard-wrapper">
@@ -105,8 +126,8 @@ $isSuperAdmin = $user['role'] === 'super_admin';
         <div class="page-header">DASHBOARD</div>
         
         <div class="d-flex justify-content-end mb-4 gap-2 action-buttons">
-            <button class="btn btn-main text-light" style="background-color: #880f0b;" id="btnDownload"><i class="bi bi-box-arrow-down"></i> Download</button>
-            <button class="btn btn-main text-light" style="background-color: #880f0b;" id="btnDownloadStudentData"><i class="bi bi-box-arrow-down"></i> Download Student Data</button>
+            <button class="btn btn-main text-light" style="background-color: #880f0b;" id="btnDownload"><i class="bi bi-box-arrow-down"></i> Download Dashboard</button>
+            <button class="btn btn-main text-light" style="background-color: #880f0b;" id="btnDownloadStudentData"><i class="bi bi-file-earmark-spreadsheet"></i> Download Student Data</button>
         </div>
 
         <?php if ($user['role'] == "teacher") { ?>
@@ -158,21 +179,39 @@ $isSuperAdmin = $user['role'] === 'super_admin';
     $(document).ready(function() {
         console.log("Dashboard Loaded");
 
-        // --- NUCLEAR TOGGLE LOGIC ---
-        // 1. Unbind any previous clicks to prevent double-firing
+        // --- SIDEBAR TOGGLE ---
         $(document).off('click', '.sidebar-toggle');
-        
-        // 2. Bind the new click event
         $(document).on('click', '.sidebar-toggle', function(e) {
             e.preventDefault();
-            e.stopPropagation(); // Stop bubbling
-            console.log("Toggle Clicked"); // Debugging
-            
-            // Toggle the class on the wrapper
+            e.stopPropagation(); 
             $(".dashboard-wrapper").toggleClass("toggled");
         });
 
-        // --- LOAD DATA LOGIC (UNCHANGED) ---
+        // ============================================
+        // === FIXED DOWNLOAD LOGIC ===
+        // ============================================
+
+        // 1. Button: "Download" -> Downloads Dashboard Summary (CSV)
+        $("#btnDownload").on("click", function(e) {
+            e.preventDefault();
+            const userId = $("#hidden_user_id").val();
+            const isSuperAdmin = $("#hidden_is_super_admin").val();
+            
+            // Redirect to the dashboard export script
+            window.location.href = `../backend/api/web/export_dashboard.php?user_id=${userId}&is_admin=${isSuperAdmin}`;
+        });
+
+        // 2. Button: "Download Student Data" -> Downloads Student List (CSV)
+        $("#btnDownloadStudentData").on("click", function(e) {
+            e.preventDefault();
+            const userId = $("#hidden_user_id").val();
+            const isSuperAdmin = $("#hidden_is_super_admin").val();
+
+            // Redirect to the student export script
+            window.location.href = `../backend/api/web/export_students.php?teacher_id=${userId}&is_admin=${isSuperAdmin}`;
+        });
+
+        // --- LOAD DASHBOARD DATA ---
         const hidden_user_id = $("#hidden_user_id").val();
         const is_super_admin = $("#hidden_is_super_admin").val();
 
@@ -184,7 +223,8 @@ $isSuperAdmin = $user['role'] === 'super_admin';
                     try {
                         let res = JSON.parse(response);
                         if (is_super_admin == "true") {
-                            $("#unang-markahan-videos-uploaded-count").text(res.data.vid_uploaded_count[0]?.video_count || 0);
+                            // ... (Your existing Super Admin Chart Logic) ...
+                             $("#unang-markahan-videos-uploaded-count").text(res.data.vid_uploaded_count[0]?.video_count || 0);
                             $("#pangalawang-markahan-videos-uploaded-count").text(res.data.vid_uploaded_count[1]?.video_count || 0);
                             $("#pangatlong-markahan-videos-uploaded-count").text(res.data.vid_uploaded_count[2]?.video_count || 0);
                             $("#ika-apat-na-markahan-videos-uploaded-count").text(res.data.vid_uploaded_count[3]?.video_count || 0);
@@ -197,11 +237,27 @@ $isSuperAdmin = $user['role'] === 'super_admin';
                             gradient.addColorStop(0, '#a71b1b'); gradient.addColorStop(1, '#880f0b');
                             new Chart(vidUploadedCtx, { type: 'bar', data: { labels: ['Unang', 'Pangalawa', 'Pangatlo', 'Ika-apat'], datasets: [{ label: 'Uploaded Videos', data: [res.data.vid_uploaded_count[0]?.video_count||0, res.data.vid_uploaded_count[1]?.video_count||0, res.data.vid_uploaded_count[2]?.video_count||0, res.data.vid_uploaded_count[3]?.video_count||0], backgroundColor: gradient }] } });
                         } else {
+                            // ... (Your existing Teacher Chart Logic) ...
                             $("#dashboard-my-section-count-count").text(res.data.section_count);
                             $("#dashboard-my-student-count").text(res.data.total_students);
+                            
+                            // Map data to cards
+                            const levels = ['unang', 'pangalawang', 'pangatlong', 'ika-apat-na'];
+                            res.data.level_stats.forEach((stat, index) => {
+                                if(levels[index]) {
+                                    $(`#${levels[index]}-markahan-no-of-passed-student`).text(stat.passed_count);
+                                    $(`#${levels[index]}-markahan-no-of-failed-student`).text(stat.failed_count);
+                                }
+                            });
+                            res.data.completed_stats.forEach((stat, index) => {
+                                if(levels[index]) {
+                                    $(`#${levels[index]}-markahan-student-video-completion-count`).text(stat.count);
+                                }
+                            });
+
                             var passFailedCtx = document.getElementById('passed-failed-student-chart').getContext('2d');
                             if (Chart.getChart("passed-failed-student-chart")) { Chart.getChart("passed-failed-student-chart").destroy(); }
-                            new Chart(passFailedCtx, { type: 'line', data: { labels: ['Unang', 'Pangalawa', 'Pangatlo', 'Ika-apat'], datasets: [{ label: 'Passed', data: [res.data.level_stats[0].passed_count, res.data.level_stats[1].passed_count, res.data.level_stats[2].passed_count, res.data.level_stats[3].passed_count], borderColor: 'blue', backgroundColor: 'rgba(0, 0, 255, 0.1)', fill: true }, { label: 'Failed', data: [res.data.level_stats[0].failed_count, res.data.level_stats[1].failed_count, res.data.level_stats[2].failed_count, res.data.level_stats[3].failed_count], borderColor: 'green', backgroundColor: 'rgba(0, 255, 21, 0.1)', fill: true }] } });
+                            new Chart(passFailedCtx, { type: 'line', data: { labels: ['Unang', 'Pangalawa', 'Pangatlo', 'Ika-apat'], datasets: [{ label: 'Passed', data: [res.data.level_stats[0]?.passed_count||0, res.data.level_stats[1]?.passed_count||0, res.data.level_stats[2]?.passed_count||0, res.data.level_stats[3]?.passed_count||0], borderColor: 'blue', backgroundColor: 'rgba(0, 0, 255, 0.1)', fill: true }, { label: 'Failed', data: [res.data.level_stats[0]?.failed_count||0, res.data.level_stats[1]?.failed_count||0, res.data.level_stats[2]?.failed_count||0, res.data.level_stats[3]?.failed_count||0], borderColor: 'green', backgroundColor: 'rgba(0, 255, 21, 0.1)', fill: true }] } });
                         }
                     } catch(e) { console.error("Parse Error", e); }
                 }
