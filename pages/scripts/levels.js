@@ -15,72 +15,52 @@ $(document).ready(function () {
 
                     if (levels.length === 0) {
                         html = `
-                            <div class="col-12">
-                                <div class="alert alert-light text-center border text-muted shadow-sm">
-                                    Walang antas na nahanap.
-                                </div>
+                            <div class="p-4 text-center text-muted">
+                                Walang antas na nahanap.
                             </div>`;
                     } else {
                         levels.forEach((level) => {
-                            let markahan = "";
-                            let icon = "";
+                            let markahanName = "";
                             
+                            // Determine Label
                             switch (level.level) {
-                                case 1:
-                                    markahan = "Unang Markahan";
-                                    icon = "bi-1-square-fill";
-                                    break;
-                                case 2:
-                                    markahan = "Pangalawang Markahan";
-                                    icon = "bi-2-square-fill";
-                                    break;
-                                case 3:
-                                    markahan = "Pangatlong Markahan";
-                                    icon = "bi-3-square-fill";
-                                    break;
-                                case 4:
-                                    markahan = "Ika-apat na Markahan";
-                                    icon = "bi-4-square-fill";
-                                    break;
-                                default:
-                                    markahan = "Markahan " + level.level;
-                                    icon = "bi-layers-fill";
+                                case 1: markahanName = "Unang Markahan"; break;
+                                case 2: markahanName = "Pangalawang Markahan"; break;
+                                case 3: markahanName = "Pangatlong Markahan"; break;
+                                case 4: markahanName = "Ika-apat na Markahan"; break;
+                                default: markahanName = "Markahan " + level.level;
                             }
 
+                            // Generate the List Item HTML
                             html += `
-                                <div class="col-12">
-                                    <div class="card shadow-sm border-0 markahan-card">
-                                        <div class="card-body p-3 d-flex align-items-center justify-content-between flex-wrap gap-3">
+                                <div class="markahan-item">
+                                    <span class="markahan-title">${markahanName}</span>
+                                    
+                                    <div class="dropdown">
+                                        <button class="btn-action-red dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            Action
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow">
                                             
-                                            <div class="d-flex align-items-center">
-                                                <div class="level-icon-wrapper me-3">
-                                                    <i class="bi ${icon} fs-3 text-main"></i>
-                                                </div>
-                                                <div>
-                                                    <h5 class="card-title fw-bold text-dark mb-0">${markahan}</h5>
-                                                    <p class="card-text text-muted small mb-0">
-                                                        ${level.description || 'Quarterly assessment management.'}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            <div class="d-flex align-items-center gap-2">
-                                                <a href="level_details.php?level=${level.id}" class="btn btn-sm btn-outline-main d-flex align-items-center">
-                                                    <i class="bi bi-eye me-2"></i> View
+                                            <li>
+                                                <a class="dropdown-item" href="level_details.php?level=${level.id}">
+                                                    <i class="bi bi-eye me-2"></i> View Details
                                                 </a>
-                                                
-                                                <div class="dropdown">
-                                                    <button class="btn btn-sm btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                        <i class="bi bi-three-dots-vertical"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
-                                                        <li><a class="dropdown-item" href='create_assessment.php?level=${level.id}'><i class="bi bi-pencil-square me-2"></i>Create Assessment</a></li>
-                                                        <li><a class="dropdown-item" href='taken_assessments.php?level=${level.id}'><i class="bi bi-journal-check me-2"></i>View Scores</a></li>
-                                                    </ul>
-                                                </div>
-                                            </div>
+                                            </li>
 
-                                        </div>
+                                            <li>
+                                                <a class="dropdown-item" href="create_assessment.php?level=${level.id}">
+                                                    <i class="bi bi-pencil-square me-2"></i> Create Assessment
+                                                </a>
+                                            </li>
+
+                                            <li>
+                                                <a class="dropdown-item" href="taken_assessments.php?level=${level.id}">
+                                                    <i class="bi bi-journal-check me-2"></i> View Taken Assessment
+                                                </a>
+                                            </li>
+
+                                        </ul>
                                     </div>
                                 </div>
                             `;
@@ -89,11 +69,11 @@ $(document).ready(function () {
 
                     $("#levels-container").html(html);
                 } else {
-                    $("#levels-container").html(`<div class="col-12 text-center text-danger">Failed to load levels.</div>`);
+                    $("#levels-container").html(`<div class="p-4 text-center text-danger">Failed to load levels.</div>`);
                 }
             },
             error: function () {
-                $("#levels-container").html(`<div class="col-12 text-center text-danger">Server error.</div>`);
+                $("#levels-container").html(`<div class="p-4 text-center text-danger">Server error.</div>`);
             },
         });
     };

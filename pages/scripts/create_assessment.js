@@ -1,606 +1,165 @@
+let questionsList = []; // Array to store questions temporarily
+
 $(document).ready(function () {
-  const auth_user_id = $("#auth_user_id").val();
-  const level_id = $("#hidden_level_id").val();
 
-  const showAlert = (type, message) => {
-    $("#alert").removeClass().addClass(`alert ${type}`).text(message).show();
+    // --- MAIN FORM SUBMIT ---
+    $("#create-assessment-form").on("submit", function (e) {
+        e.preventDefault();
 
-    setTimeout(() => {
-      $("#alert").fadeOut("slow", function () {
-        $(this).removeClass().text("").hide();
-      });
-    }, 2000);
-  };
+        const title = $("#assessment_title").val();
+        if (!title) { alert("Please enter an Assessment Title."); return; }
 
-  const loadAssessment = () => {
-    $.ajax({
-      type: "POST",
-      url: "../backend/api/web/asssessments.php",
-      data: { requestType: "GetAssessment", level_id },
-      success: function (response) {
-        let res = JSON.parse(response);
-        console.log(res);
+        // Use FormData to handle files + form fields
+        let formData = new FormData(this);
 
-        if (res.status === "success") {
-          if (Array.isArray(res.data) && res.data.length > 0) {
-            // has assesment
+        // Append Fixed Data
+        formData.append('requestType', 'CreateAssessment');
+        formData.append('teacher_id', $("#hidden_user_id").val());
+        formData.append('level_id', $("#hidden_level_id").val());
+        
+        // Append Defaults for removed fields
+        formData.append('due_date', ''); 
+        formData.append('time_limit', 0);
+        formData.append('is_active', 0);
 
-            $("#page-title-action-type").text("Edit");
+        // Append the QUESTIONS LIST as a JSON string
+        formData.append('questions_data', JSON.stringify(questionsList));
 
-            let assessment_id = res.data[0].id;
-
-            $("#hiddenAssessmentId").val(assessment_id);
-            $("#title").val(res.data[0].title);
-            $("#description").val(res.data[0].description);
-
-            $(".form-assesment-id").val(assessment_id);
-
-            $("#button-create-assesment-action").text("Update Assessment");
-
-            $(".DONTSHOWHENCREATEONLY").removeClass("d-none");
-
-            loadMultipleChoiceQuestions(assessment_id);
-            loadTrueOrFalseQuestions(assessment_id);
-            loadIdentificationQuestions(assessment_id);
-            loadJumbledWordsQuestions(assessment_id);
-          } else {
-            $("#page-title-action-type").text("Create");
-            $("#button-create-assesment-action").text("Create Assessment");
-
-            $(".DONTSHOWHENCREATEONLY").addClass("d-none");
-          }
-        }
-      },
-      error: function () {
-        console.log("Server error.");
-      },
+        // Send AJAX
+        $.ajax({
+            type: "POST",
+            url: "../backend/api/web/asssessments.php", // Ensure filename matches backend
+            data: formData,
+            dataType: "json",
+            contentType: false, 
+            processData: false, 
+            beforeSend: function() {
+                $(".btn-submit").prop("disabled", true).html('Saving...');
+            },
+            success: function (response) {
+                $(".btn-submit").prop("disabled", false).html('<i class="bi bi-check-circle me-2"></i> Save Assessment');
+                if (response.status === "success") {
+                    alert("Assessment created successfully!");
+                    window.location.href = "levels.php"; 
+                } else {
+                    alert("Error: " + (response.message || "Unknown error"));
+                }
+            },
+            error: function (xhr) {
+                $(".btn-submit").prop("disabled", false).html('<i class="bi bi-check-circle me-2"></i> Save Assessment');
+                console.error("Error:", xhr.responseText);
+                alert("Server Error.");
+            },
+        });
     });
-  };
-
-  const loadMultipleChoiceQuestions = (assessment_id) => {
-    $.ajax({
-      type: "POST",
-      url: "../backend/api/web/asssessments.php",
-      data: { requestType: "GetMultiQuestions", assessment_id },
-      success: function (response) {
-        let res = JSON.parse(response);
-        console.log(res);
-
-        if (res.status === "success" && Array.isArray(res.data)) {
-          const container = $("#multi-questions-container");
-          container.empty();
-
-          res.data.forEach((q, index) => {
-            const card = `
-              <div class="card p-3 mb-3">
-                <div style="font-size: 14px; font-weight: bold;">${
-                  index + 1
-                }. ${q.question}</div>
-                <div style="font-size: 12px;">a. ${q.choice_a}</div>
-                <div style="font-size: 12px;">b. ${q.choice_b}</div>
-                <div style="font-size: 12px;">c. ${q.choice_c}</div>
-                <div style="font-size: 12px;">d. ${q.choice_d}</div>
-                <div style="font-size: 12px; font-weight: bold;">answer: ${
-                  q.correct_answer
-                }</div>
-              </div>
-            `;
-            container.append(card);
-          });
-
-          if (res.data.length === 0) {
-            container.append(
-              `<div class="text-muted">No multiple choice questions available.</div>`
-            );
-          }
-        } else {
-          console.warn("No data received.");
-        }
-      },
-      error: function () {
-        console.log("Server error.");
-      },
-    });
-  };
-
-  // GetTrueOrFalseQuestions
-
-  const loadTrueOrFalseQuestions = (assessment_id) => {
-    $.ajax({
-      type: "POST",
-      url: "../backend/api/web/asssessments.php",
-      data: { requestType: "GetTrueOrFalseQuestions", assessment_id },
-      success: function (response) {
-        let res = JSON.parse(response);
-        console.log(res);
-
-        if (res.status === "success" && Array.isArray(res.data)) {
-          const container = $("#t-or-f-questions-container");
-          container.empty();
-
-          res.data.forEach((q, index) => {
-            const card = `
-              <div class="card p-3 mb-3">
-                <div style="font-size: 14px; font-weight: bold;">${
-                  index + 1
-                }. ${q.question}</div>
-                <div style="font-size: 12px; font-weight: bold;">answer: ${
-                  q.answer ? "True" : "False"
-                }</div>
-              </div>
-            `;
-            container.append(card);
-          });
-
-          if (res.data.length === 0) {
-            container.append(
-              `<div class="text-muted">No true or false questions available.</div>`
-            );
-          }
-        } else {
-          console.warn("No data received.");
-        }
-      },
-      error: function () {
-        console.log("Server error.");
-      },
-    });
-  };
-
-  const loadIdentificationQuestions = (assessment_id) => {
-    $.ajax({
-      type: "POST",
-      url: "../backend/api/web/asssessments.php",
-      data: { requestType: "GetIdentificationQuestions", assessment_id },
-      success: function (response) {
-        let res = JSON.parse(response);
-        console.log(res);
-
-        if (res.status === "success" && Array.isArray(res.data)) {
-          const container = $("#identification-questions-container");
-          container.empty();
-
-          res.data.forEach((q, index) => {
-            const card = `
-              <div class="card p-3 mb-3">
-                <div style="font-size: 14px; font-weight: bold;">${
-                  index + 1
-                }. ${q.question}</div>
-                <div style="font-size: 12px; font-weight: bold;">answer: ${
-                  q.answer
-                }</div>
-              </div>
-            `;
-            container.append(card);
-          });
-
-          if (res.data.length === 0) {
-            container.append(
-              `<div class="text-muted">No identification questions available.</div>`
-            );
-          }
-        } else {
-          console.warn("No data received.");
-        }
-      },
-      error: function () {
-        console.log("Server error.");
-      },
-    });
-  };
-
-  const loadJumbledWordsQuestions = (assessment_id) => {
-    $.ajax({
-      type: "POST",
-      url: "../backend/api/web/asssessments.php",
-      data: { requestType: "GetJumbledWordsQuestions", assessment_id },
-      success: function (response) {
-        let res = JSON.parse(response);
-        console.log(res);
-
-        if (res.status === "success" && Array.isArray(res.data)) {
-          const container = $("#jumbled-words-questions-container");
-          container.empty();
-
-          res.data.forEach((q, index) => {
-            const card = `
-              <div class="card p-3 mb-3">
-                <div style="font-size: 14px; font-weight: bold;">${
-                  index + 1
-                }. ${q.question}</div>
-                <div style="font-size: 12px; font-weight: bold;">answer: ${
-                  q.answer
-                }</div>
-              </div>
-            `;
-            container.append(card);
-          });
-
-          if (res.data.length === 0) {
-            container.append(
-              `<div class="text-muted">No jumbled words questions available.</div>`
-            );
-          }
-        } else {
-          console.warn("No data received.");
-        }
-      },
-      error: function () {
-        console.log("Server error.");
-      },
-    });
-  };
-
-  $("#create-assessment-form").submit(function (e) {
-    e.preventDefault();
-
-    const formData = new FormData(this);
-
-    $.ajax({
-      type: "POST",
-      url: "../backend/api/web/asssessments.php",
-      data: formData,
-      processData: false,
-      contentType: false,
-      success: function (response) {
-        let res = JSON.parse(response);
-        console.log(res);
-
-        if (res.status == "success") {
-          showAlert("alert-success", res.message);
-          loadAssessment();
-        }
-      },
-    });
-  });
-
-  $("#multiple-choice-form").submit(function (e) {
-    e.preventDefault();
-
-    const formData = new FormData(this);
-
-    let assesment_id = $(".form-assesment-id").val();
-
-    $.ajax({
-      type: "POST",
-      url: "../backend/api/web/asssessments.php",
-      data: formData,
-      processData: false,
-      contentType: false,
-      success: function (response) {
-        let res = JSON.parse(response);
-        console.log(res);
-
-        if (res.status == "success") {
-          $("#multipleChoiceModal").modal("hide");
-          $("#multiple-choice-form")[0].reset();
-          showAlert("alert-success", res.message);
-
-          loadMultipleChoiceQuestions(assesment_id);
-        }
-      },
-    });
-  });
-
-  $("#true-false-form").submit(function (e) {
-    e.preventDefault();
-
-    const formData = new FormData(this);
-
-    let assesment_id = $(".form-assesment-id").val();
-
-    $.ajax({
-      type: "POST",
-      url: "../backend/api/web/asssessments.php",
-      data: formData,
-      processData: false,
-      contentType: false,
-      success: function (response) {
-        let res = JSON.parse(response);
-        console.log(res);
-
-        if (res.status == "success") {
-          $("#trueFalseModal").modal("hide");
-          $("#true-false-form")[0].reset();
-          showAlert("alert-success", res.message);
-
-          loadTrueOrFalseQuestions(assesment_id);
-        }
-      },
-    });
-  });
-
-  $("#identification-form").submit(function (e) {
-    e.preventDefault();
-
-    const formData = new FormData(this);
-
-    let assesment_id = $(".form-assesment-id").val();
-
-    $.ajax({
-      type: "POST",
-      url: "../backend/api/web/asssessments.php",
-      data: formData,
-      processData: false,
-      contentType: false,
-      success: function (response) {
-        let res = JSON.parse(response);
-        console.log(res);
-
-        if (res.status == "success") {
-          $("#identificationModal").modal("hide");
-          $("#identification-form")[0].reset();
-          showAlert("alert-success", res.message);
-
-          loadIdentificationQuestions(assesment_id);
-        }
-      },
-    });
-  });
-
-  $("#jumbled-words-form").submit(function (e) {
-    e.preventDefault();
-
-    const formData = new FormData(this);
-
-    let assesment_id = $(".form-assesment-id").val();
-
-    $.ajax({
-      type: "POST",
-      url: "../backend/api/web/asssessments.php",
-      data: formData,
-      processData: false,
-      contentType: false,
-      success: function (response) {
-        let res = JSON.parse(response);
-        console.log(res);
-
-        if (res.status == "success") {
-          $("#jumbledWordsModal").modal("hide");
-          $("#jumbled-words-form")[0].reset();
-          showAlert("alert-success", res.message);
-
-          loadJumbledWordsQuestions(assesment_id);
-        }
-      },
-    });
-  });
-
-  $("#multiple-choice-CSV").on("change", function (e) {
-    const file = e.target.files[0];
-
-    if (!file) {
-      alert("No file selected.");
-      return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = function (e) {
-      const text = e.target.result;
-
-      const rows = text.trim().split("\n");
-      let questions = [];
-
-      rows.slice(1).forEach((row, index) => {
-        const columns = row.split(",");
-        const question = columns[0]?.trim();
-        const choice_a = columns[1]?.trim();
-        const choice_b = columns[2]?.trim();
-        const choice_c = columns[3]?.trim();
-        const choice_d = columns[4]?.trim();
-        const answer = columns[5]?.trim();
-
-        const obj = {
-          question,
-          choice_a,
-          choice_b,
-          choice_c,
-          choice_d,
-          answer,
-        };
-
-        questions.push(obj);
-      });
-
-      console.log(questions);
-
-      const assessment_id = $("#hiddenAssessmentId").val();
-
-      $.ajax({
-        type: "POST",
-        url: "../backend/api/web/asssessments.php",
-        data: {
-          requestType: "ImportMultipleChoices",
-          assessment_id,
-          questions: JSON.stringify(questions),
-        },
-        success: function (response) {
-          let res = JSON.parse(response);
-
-          if (res.status === "success") {
-            showAlert("alert-success", res.message);
-            loadAssessment();
-          } else {
-            showAlert("alert-danger", res.message);
-          }
-        },
-      });
-    };
-
-    reader.readAsText(file);
-  });
-
-  $("#true-or-false-CSV").on("change", function (e) {
-    const file = e.target.files[0];
-
-    if (!file) {
-      alert("No file selected.");
-      return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = function (e) {
-      const text = e.target.result;
-
-      const rows = text.trim().split("\n");
-      let questions = [];
-
-      rows.slice(1).forEach((row, index) => {
-        const columns = row.split(",");
-        const question = columns[0]?.trim();
-        const answer = columns[1]?.trim();
-
-        const obj = {
-          question,
-          answer,
-        };
-
-        questions.push(obj);
-      });
-
-      console.log(questions);
-
-      const assessment_id = $("#hiddenAssessmentId").val();
-
-      $.ajax({
-        type: "POST",
-        url: "../backend/api/web/asssessments.php",
-        data: {
-          requestType: "ImportTrueOrFalse",
-          assessment_id,
-          questions: JSON.stringify(questions),
-        },
-        success: function (response) {
-          let res = JSON.parse(response);
-
-          if (res.status === "success") {
-            showAlert("alert-success", res.message);
-            loadAssessment();
-          } else {
-            showAlert("alert-danger", res.message);
-          }
-        },
-      });
-    };
-
-    reader.readAsText(file);
-  });
-
-  $("#identification-CSV").on("change", function (e) {
-    const file = e.target.files[0];
-
-    if (!file) {
-      alert("No file selected.");
-      return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = function (e) {
-      const text = e.target.result;
-
-      const rows = text.trim().split("\n");
-      let questions = [];
-
-      rows.slice(1).forEach((row, index) => {
-        const columns = row.split(",");
-        const question = columns[0]?.trim();
-        const answer = columns[1]?.trim();
-
-        const obj = {
-          question,
-          answer,
-        };
-
-        questions.push(obj);
-      });
-
-      console.log(questions);
-
-      const assessment_id = $("#hiddenAssessmentId").val();
-
-      $.ajax({
-        type: "POST",
-        url: "../backend/api/web/asssessments.php",
-        data: {
-          requestType: "ImportIdentification",
-          assessment_id,
-          questions: JSON.stringify(questions),
-        },
-        success: function (response) {
-          let res = JSON.parse(response);
-
-          if (res.status === "success") {
-            showAlert("alert-success", res.message);
-            loadAssessment();
-          } else {
-            showAlert("alert-danger", res.message);
-          }
-        },
-      });
-    };
-
-    reader.readAsText(file);
-  });
-
-  $("#jumbled-words-CSV").on("change", function (e) {
-    const file = e.target.files[0];
-
-    if (!file) {
-      alert("No file selected.");
-      return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = function (e) {
-      const text = e.target.result;
-
-      const rows = text.trim().split("\n");
-      let questions = [];
-
-      rows.slice(1).forEach((row, index) => {
-        const columns = row.split(",");
-        const question = columns[0]?.trim();
-        const answer = columns[1]?.trim();
-
-        const obj = {
-          question,
-          answer,
-        };
-
-        questions.push(obj);
-      });
-
-      console.log(questions);
-
-      const assessment_id = $("#hiddenAssessmentId").val();
-
-      $.ajax({
-        type: "POST",
-        url: "../backend/api/web/asssessments.php",
-        data: {
-          requestType: "ImportJumbledWords",
-          assessment_id,
-          questions: JSON.stringify(questions),
-        },
-        success: function (response) {
-          let res = JSON.parse(response);
-
-          if (res.status === "success") {
-            showAlert("alert-success", res.message);
-            loadAssessment();
-          } else {
-            showAlert("alert-danger", res.message);
-          }
-        },
-      });
-    };
-
-    reader.readAsText(file);
-  });
-
-  loadAssessment();
 });
+
+// --- HELPER FOR MODAL SELECTION UI ---
+// Highlights the selected choice row (MCQ A-D or TF True/False)
+function selectRadio(val) {
+    // 1. Check the specific radio button
+    let radioBtn = $("#radio" + val);
+    radioBtn.prop("checked", true);
+    
+    // 2. Find parent form
+    let form = radioBtn.closest("form");
+    
+    // 3. Update styling classes
+    form.find(".choice-item").removeClass("active-choice");
+    radioBtn.closest(".choice-item").addClass("active-choice");
+}
+
+// Global listener for radio buttons to update UI if clicked directly
+$(document).on('change', 'input[type="radio"]', function() {
+    let val = $(this).val();
+    if ($(this).attr("id") && $(this).attr("id").startsWith("radio")) {
+        selectRadio(val);
+    }
+});
+
+// --- FUNCTION TO SAVE QUESTION FROM MODAL ---
+function saveQuestion(type) {
+    let qData = { type: type };
+    let isValid = true;
+
+    if (type === 'MCQ') {
+        qData.question = $("#mcq_question").val();
+        qData.a = $("#mcq_a").val();
+        qData.b = $("#mcq_b").val();
+        qData.c = $("#mcq_c").val();
+        qData.d = $("#mcq_d").val();
+        qData.correct = $("input[name='mcq_correct']:checked").val();
+
+        if (!qData.question || !qData.a || !qData.b || !qData.correct) isValid = false;
+    } 
+    else if (type === 'TF') {
+        qData.question = $("#tf_question").val();
+        qData.correct = $("input[name='tf_correct']:checked").val();
+        if (!qData.question || !qData.correct) isValid = false;
+    }
+    else if (type === 'IDENT') {
+        qData.question = $("#ident_question").val();
+        qData.correct = $("#ident_answer").val();
+        if (!qData.question || !qData.correct) isValid = false;
+    }
+    else if (type === 'JUMBLED') {
+        qData.question = $("#jumbled_question").val();
+        qData.correct = $("#jumbled_answer").val();
+        if (!qData.question || !qData.correct) isValid = false;
+    }
+
+    if (!isValid) {
+        alert("Please fill in all required fields.");
+        return;
+    }
+
+    // Add to Array
+    questionsList.push(qData);
+    renderQuestions();
+
+    // Reset Forms & UI
+    $("#formMCQ")[0].reset();
+    $("#formTF")[0].reset();
+    $("#formIdent")[0].reset();
+    $("#formJumbled")[0].reset();
+    $(".choice-item").removeClass("active-choice");
+    
+    $(".modal").modal("hide");
+}
+
+// --- RENDER PREVIEW LIST ---
+function renderQuestions() {
+    let container = $("#questions-list");
+    let wrapper = $("#questions-preview-container");
+    container.empty();
+
+    if (questionsList.length > 0) {
+        wrapper.removeClass("d-none");
+        $("#q-count").text(questionsList.length);
+
+        questionsList.forEach((q, index) => {
+            let badgeClass = "bg-secondary";
+            if(q.type === 'MCQ') badgeClass = "bg-primary";
+            if(q.type === 'TF') badgeClass = "bg-success";
+            if(q.type === 'IDENT') badgeClass = "bg-info text-dark";
+            if(q.type === 'JUMBLED') badgeClass = "bg-warning text-dark";
+            
+            let html = `
+                <div class="added-question-item">
+                    <span class="badge ${badgeClass} mb-2">${q.type}</span>
+                    <p class="mb-1 fw-bold">${q.question}</p>
+                    <small class="text-muted">Answer: ${q.correct}</small>
+                    <button type="button" class="btn-remove-q" onclick="removeQuestion(${index})">&times;</button>
+                </div>
+            `;
+            container.append(html);
+        });
+    } else {
+        wrapper.addClass("d-none");
+    }
+}
+
+function removeQuestion(index) {
+    questionsList.splice(index, 1);
+    renderQuestions();
+}

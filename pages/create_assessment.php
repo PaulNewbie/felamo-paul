@@ -1,304 +1,416 @@
-<?php
-include("components/header.php");
-
-// $auth_user_id
-
-$hasExistingAssessment = false;
+<?php 
+include("components/header.php"); 
 
 if (isset($_GET['level'])) {
     $level_id = $_GET['level'];
-
     $levelResult = $AuthController->GetUsingId("levels", $level_id);
-
-    if ($levelResult->num_rows > 0) {
-        $level = $levelResult->fetch_assoc();
-
-        if ($level['teacher_id'] != $auth_user_id) {
-            header("Location: ../index.php");
-        }
-
-        // $assessmentResult = $AuthController->GetUsingCustomField("assessments", "level_id", $level_id);
-
-        // if ($assessmentResult->num_rows > 0) {
-        //     $hasExistingAssessment = true;
-        //     $assessment = $assessmentResult->fetch_assoc();
-        // }
+    if ($levelResult && $levelResult->num_rows > 0) {
+        $levelData = $levelResult->fetch_assoc();
     } else {
-        header("Location: ../index.php");
+        header("Location: levels.php");
+        exit();
     }
 } else {
-    header("Location: ../index.php");
-    exit;
+    header("Location: levels.php");
+    exit();
 }
 ?>
 
-<!-- hidden inputs -->
-
-<input type="hidden" id="auth_user_id" value="<?= $auth_user_id ?>">
+<input type="hidden" id="hidden_user_id" value="<?= $auth_user_id ?>">
 <input type="hidden" id="hidden_level_id" value="<?= $level_id ?>">
 
+<style>
+    /* --- LAYOUT & RESET --- */
+    nav.navbar { display: none !important; } 
+    body { background-color: #f4f6f9; overflow-x: hidden; }
+    .dashboard-wrapper { display: flex; width: 100%; min-height: 100vh; overflow-x: hidden; }
+    .main-content { flex: 1; margin-left: 280px; padding: 30px 40px; background-color: #f8f9fa; transition: margin-left 0.3s ease-in-out; }
+    .dashboard-wrapper.toggled .main-content { margin-left: 0 !important; }
 
-<div class="container py-4">
-    <h4 class="my-3 text-main">
-        <span id="page-title-action-type"></span>
-        Assessment sa
-        <?=
-        $level['level'] == 1 ? "Unang markahan" : ($level['level'] == 2 ? "Pangalawang markahan" : ($level['level'] == 3 ? "Pangatlong markahan" : ($level['level'] == 4 ? "Ika-apat na markahan" : "Hindi kilalang markahan")))
-        ?>
-    </h4>
+    /* --- SIDEBAR FIXES --- */
+    .sidebar-profile { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.5); }
+    .sidebar-profile img { width: 80px !important; height: 80px !important; border-radius: 50%; object-fit: cover; border: 2px solid white; }
+    .sidebar-profile h5 { font-weight: bold; margin: 0; font-size: 1.2rem; text-transform: uppercase; color: white; }
+    .nav-link-custom { display: flex; align-items: center; padding: 12px 15px; color: white; text-decoration: none; font-weight: 600; margin-bottom: 10px; transition: 0.3s; border-radius: 5px; }
+    .nav-link-custom:hover { background-color: rgba(255, 255, 255, 0.2); color: white; }
+    .nav-link-custom.active { background-color: #FFC107 !important; color: #440101 !important; }
+    .nav-link-custom i { margin-right: 15px; font-size: 1.2rem; }
+    .logout-btn { margin-top: auto; background-color: #FFC107; color: black; font-weight: bold; border: none; width: 100%; padding: 12px; border-radius: 25px; text-align: center; cursor: pointer; }
 
+    /* --- PAGE HEADER --- */
+    .page-header-banner {
+        background: linear-gradient(90deg, #a71b1b 0%, #880f0b 100%);
+        color: white; padding: 15px 25px; border-radius: 8px; margin-bottom: 25px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between;
+        font-size: 1.5rem; font-weight: 700; text-transform: uppercase;
+    }
+    .header-text { display: flex; align-items: center; }
+    .header-text i { margin-right: 15px; font-size: 1.8rem; }
+    .btn-back {
+        background-color: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.5);
+        font-size: 0.9rem; font-weight: 600; padding: 8px 20px; border-radius: 50px; text-decoration: none;
+        transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+    }
+    .btn-back:hover { background-color: white; color: #a71b1b; }
 
-    <div id="alert" style="position: fixed; top:10px; right:10px; font-size: 12px;"></div>
+    /* --- TITLES & INPUTS --- */
+    .section-title {
+        font-weight: 800; color: #a71b1b; text-transform: uppercase; 
+        font-size: 1.1rem; letter-spacing: 0.5px; text-align: center;
+        margin-bottom: 25px; margin-top: 10px;
+    }
+    .form-label { font-weight: 600; color: #444; }
+    
+    #assessment_title, #assessment_description {
+        background-color: #d9d9d9; border: 1px solid #bbb; color: #000;
+    }
+    .form-control:focus { border-color: #a71b1b; box-shadow: 0 0 0 0.2rem rgba(167, 27, 27, 0.25); }
 
-    <form id="create-assessment-form">
-        <input type="hidden" name="requestType" value="CreateAssessment">
-        <input type="hidden" name="level_id" value="<?= $level_id ?>">
+    /* --- QUESTION CARDS --- */
+    .q-card {
+        background: #d9d9d9; border: 1px solid #dee2e6; border-radius: 8px; 
+        padding: 25px 20px; height: 100%; display: flex; flex-direction: column; 
+        justify-content: center; transition: transform 0.2s; text-align: center;
+    }
+    .q-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); border-color: #a71b1b; }
+    
+    .q-card-title {
+        font-weight: 800; color: #a71b1b; text-transform: uppercase; 
+        font-size: 1rem; letter-spacing: 0.5px; margin-bottom: 20px;
+    }
 
-        <input type="hidden" name="assessment_id" id="hiddenAssessmentId" value="">
+    /* --- BUTTONS & FILE INPUTS (UPDATED COLORS) --- */
+    
+    /* 1. Create Manually Button - SOLID RED */
+    .btn-create-manual { 
+        background-color: #a71b1b; 
+        color: white; 
+        border: 1px solid #a71b1b;
+        font-weight: 600; 
+        padding: 6px 12px; 
+        border-radius: 4px; 
+        transition: 0.2s; 
+        white-space: nowrap; 
+        font-size: 0.9rem;
+    }
+    .btn-create-manual:hover { 
+        background-color: #880f0b; 
+        color: white; 
+        border-color: #880f0b;
+    }
 
-        <div class="mb-3">
-            <label for="title" class="form-label">Assessment Title</label>
-            <input type="text" class="form-control" id="title" name="title"
-                value=""
-                required>
-        </div>
+    /* 2. Choose File Input - CUSTOM RED STYLING */
+    .custom-file-input {
+        border: 1px solid #a71b1b;
+        border-radius: 4px;
+        color: #a71b1b;
+        font-size: 0.85rem;
+        background-color: white;
+        padding: 0; /* Important for file inputs */
+    }
+    
+    /* Style the internal "Choose File" button */
+    .custom-file-input::file-selector-button {
+        background-color: #a71b1b;
+        color: white;
+        border: none;
+        border-right: 1px solid #880f0b;
+        padding: 7px 12px;
+        margin-right: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    
+    .custom-file-input:hover::file-selector-button {
+        background-color: #880f0b;
+    }
 
-        <div class="mb-3">
-            <label for="description" class="form-label">Assessment Description</label>
-            <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
-        </div>
+    /* --- PREVIEW LIST --- */
+    .added-question-item { border-left: 4px solid #a71b1b; background: #fff; padding: 15px; margin-bottom: 10px; border-radius: 4px; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .btn-remove-q { position: absolute; top: 10px; right: 10px; color: #dc3545; border: none; background: none; font-size: 1.1rem; }
 
-        <button type="submit" class="btn btn-main text-light">
-            <span id="button-create-assesment-action"></span>
-        </button>
-        <a href="levels.php" class="btn btn-secondary">Cancel</a>
-    </form>
+    /* --- MODALS UI --- */
+    .modal-header-custom { background: linear-gradient(90deg, #a71b1b 0%, #880f0b 100%); color: white; padding: 15px 20px; }
+    .modal-title { font-weight: 700; letter-spacing: 0.5px; }
+    .choice-item { display: flex; align-items: center; background-color: #fff; border: 1px solid #dee2e6; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; transition: all 0.2s; cursor: pointer; }
+    .choice-item:hover { border-color: #adb5bd; background-color: #f8f9fa; }
+    .choice-item.active-choice { border-color: #a71b1b; background-color: rgba(167, 27, 27, 0.03); box-shadow: 0 0 0 1px #a71b1b inset; }
+    .form-check-input.choice-radio { width: 1.3em; height: 1.3em; margin-right: 12px; cursor: pointer; border: 2px solid #adb5bd; }
+    .form-check-input.choice-radio:checked { background-color: #a71b1b; border-color: #a71b1b; }
+    .choice-letter { font-weight: 800; color: #6c757d; width: 25px; margin-right: 8px; }
+    .choice-item.active-choice .choice-letter { color: #a71b1b; }
+    .choice-input { border: none; background: transparent; width: 100%; font-weight: 500; color: #333; outline: none; }
+    
+    .btn-submit { background-color: #a71b1b; color: white; padding: 12px 30px; font-weight: bold; border: none; border-radius: 5px; transition: background 0.2s; }
+    .btn-submit:hover { background-color: #880f0b; color: white; }
+    .btn-main { background-color: #a71b1b; color: white; border: none; }
+    .btn-main:hover { background-color: #880f0b; color: white; }
 
-    <div class="DONTSHOWHENCREATEONLY">
+    @media (max-width: 991.98px) { .main-content { margin-left: 0; padding: 1rem; } .page-header-banner { flex-direction: column; gap: 15px; text-align: center; } }
+</style>
 
-        <hr>
+<div class="dashboard-wrapper">
+    <?php include("components/sidebar.php"); ?>
 
-        <div>
-            <h5 class="text-center my-3 text-main">Multple Choice</h5>
-            <div class="d-flex align-items-center">
-
-                <button class="btn btn-sm btn-main text-light my-2" data-bs-toggle="modal" data-bs-target="#multipleChoiceModal">Create Question</button>
-                <div class="input-group input-group-sm w-auto ms-2">
-                    <label for="multiple-choice-CSV" class="input-group-text">Import Questions</label>
-                    <input type="file" id="multiple-choice-CSV" class="form-control" accept=".csv">
-                </div>
-
-            </div>
-
-            <div id="multi-questions-container"></div>
-        </div>
-
-
-        <div>
-            <h5 class="text-center my-3 text-main">True or False</h5>
-            <div class="d-flex align-items-center">
-                <button class="btn btn-sm btn-main text-light my-2" data-bs-toggle="modal" data-bs-target="#trueFalseModal">Create Question</button>
-                <div class="input-group input-group-sm w-auto ms-2">
-                    <label for="true-or-false-CSV" class="input-group-text">Import Questions</label>
-                    <input type="file" id="true-or-false-CSV" class="form-control" accept=".csv">
-                </div>
-            </div>
-
-            <div id="t-or-f-questions-container"></div>
-        </div>
-
-
-        <div>
-            <h5 class="text-center my-3 text-main">Identification</h5>
-            <div class="d-flex align-items-center">
-                <button class="btn btn-sm btn-main text-light my-2" data-bs-toggle="modal" data-bs-target="#identificationModal">Create Question</button>
-                <div class="input-group input-group-sm w-auto ms-2">
-                    <label for="identification-CSV" class="input-group-text">Import Questions</label>
-                    <input type="file" id="identification-CSV" class="form-control" accept=".csv">
-                </div>
-            </div>
-
-            <div id="identification-questions-container"></div>
-        </div>
-
-
-        <div>
-            <h5 class="text-center my-3 text-main">Jumbled Words</h5>
-            <div class="d-flex align-items-center">
-                <button class="btn btn-sm btn-main text-light my-2" data-bs-toggle="modal" data-bs-target="#jumbledWordsModal">Create Question</button>
-                <div class="input-group input-group-sm w-auto ms-2">
-                    <label for="jumbled-words-CSV" class="input-group-text">Import Questions</label>
-                    <input type="file" id="jumbled-words-CSV" class="form-control" accept=".csv">
-                </div>
-            </div>
-
-            <div id="jumbled-words-questions-container"></div>
-        </div>
+    <div class="main-content">
+        <div class="page-header-banner">
+    
+    <div class="header-left" style="display: flex; align-items: center; gap: 15px;">
+        <a href="levels.php" class="btn-back-text">
+            BACK
+        </a>
+        <h4 class="m-0 fw-bold text-uppercase">
+            Detalye ng <?= htmlspecialchars($level['level'] ?? "Markahan") ?>
+        </h4>
     </div>
 
+    <div class="header-right">
+        </div>
 
 </div>
 
+        <form id="create-assessment-form" enctype="multipart/form-data">
+            
+            <div class="mb-5 px-md-3">
+                <h5 class="section-title">Assessment Details</h5>
+                <div class="mb-3">
+                    <label class="form-label">Title <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="assessment_title" name="title" placeholder="e.g. Unang Markahan - Quiz 1" required>
+                </div>
+                <div class="mb-0">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" id="assessment_description" name="description" rows="2" placeholder="Instructions..."></textarea>
+                </div>
+            </div>
 
-<div class="modal fade DONTSHOWHENCREATEONLY" id="multipleChoiceModal" tabindex="-1" aria-labelledby="multipleChoiceModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <form id="multiple-choice-form" method="POST">
-            <input type="hidden" name="requestType" value="InsertMultipleChoice">
-            <input type="hidden" name="assessment_id" class="form-assesment-id" id="form-assesment-id" value="">
+            <div id="questions-preview-container" class="mb-4 d-none px-md-3">
+                <h6 class="fw-bold text-secondary mb-3">ADDED QUESTIONS (<span id="q-count">0</span>)</h6>
+                <div id="questions-list"></div>
+            </div>
 
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="multipleChoiceModalLabel">Add Multiple Choice Question</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <h5 class="section-title">Add Question</h5>
+            <div class="row g-4 mb-5">
+                
+                <div class="col-md-6 col-lg-6">
+                    <div class="q-card">
+                        <div class="q-card-title">Multiple Choice</div>
+                        <div class="row gx-2 align-items-center justify-content-center">
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-create-manual" data-bs-toggle="modal" data-bs-target="#modalMCQ">
+                                    <i class="bi bi-plus-lg me-1"></i> Create Manually
+                                </button>
+                            </div>
+                            <div class="col">
+                                <input class="form-control form-control-sm custom-file-input" type="file" name="import_mcq" accept=".csv, .xlsx" title="Import Excel/CSV">
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="question" class="form-label">Question</label>
-                        <textarea class="form-control" id="question" name="question" rows="2" required></textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Answer Choices</label>
-                        <input type="text" class="form-control mb-2" name="choice_a" placeholder="Choice A" required>
-                        <input type="text" class="form-control mb-2" name="choice_b" placeholder="Choice B" required>
-                        <input type="text" class="form-control mb-2" name="choice_c" placeholder="Choice C" required>
-                        <input type="text" class="form-control mb-2" name="choice_d" placeholder="Choice D" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="correct_answer" class="form-label">Correct Answer</label>
-                        <select class="form-select" id="correct_answer" name="answer" required>
-                            <option value="">Select correct answer</option>
-                            <option value="A">A</option>
-                            <option value="B">B</option>
-                            <option value="C">C</option>
-                            <option value="D">D</option>
-                        </select>
+                <div class="col-md-6 col-lg-6">
+                    <div class="q-card">
+                        <div class="q-card-title">True or False</div>
+                        <div class="row gx-2 align-items-center justify-content-center">
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-create-manual" data-bs-toggle="modal" data-bs-target="#modalTF">
+                                    <i class="bi bi-plus-lg me-1"></i> Create Manually
+                                </button>
+                            </div>
+                            <div class="col">
+                                <input class="form-control form-control-sm custom-file-input" type="file" name="import_tf" accept=".csv, .xlsx" title="Import Excel/CSV">
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-main text-light">Save Question</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="col-md-6 col-lg-6">
+                    <div class="q-card">
+                        <div class="q-card-title">Identification</div>
+                        <div class="row gx-2 align-items-center justify-content-center">
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-create-manual" data-bs-toggle="modal" data-bs-target="#modalIdent">
+                                    <i class="bi bi-plus-lg me-1"></i> Create Manually
+                                </button>
+                            </div>
+                            <div class="col">
+                                <input class="form-control form-control-sm custom-file-input" type="file" name="import_ident" accept=".csv, .xlsx" title="Import Excel/CSV">
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+                <div class="col-md-6 col-lg-6">
+                    <div class="q-card">
+                        <div class="q-card-title">Jumbled Words</div>
+                        <div class="row gx-2 align-items-center justify-content-center">
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-create-manual" data-bs-toggle="modal" data-bs-target="#modalJumbled">
+                                    <i class="bi bi-plus-lg me-1"></i> Create Manually
+                                </button>
+                            </div>
+                            <div class="col">
+                                <input class="form-control form-control-sm custom-file-input" type="file" name="import_jumbled" accept=".csv, .xlsx" title="Import Excel/CSV">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end pb-5 border-top pt-4">
+                <a href="levels.php" class="btn btn-light me-2 border py-2 px-4">Cancel</a>
+                <button type="submit" class="btn btn-submit shadow px-4">
+                    <i class="bi bi-check-circle me-2"></i> Save Assessment
+                </button>
             </div>
         </form>
     </div>
 </div>
 
-
-<div class="modal fade DONTSHOWHENCREATEONLY" id="trueFalseModal" tabindex="-1" aria-labelledby="trueFalseModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <form id="true-false-form" method="POST">
-            <input type="hidden" name="requestType" value="InsertTrueOrFalse">
-            <input type="hidden" name="assessment_id" class="form-assesment-id" id="tf-assessment-id" value="">
-
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="trueFalseModalLabel">Add True or False Question</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="tf-question" class="form-label">Question</label>
-                        <textarea class="form-control" id="tf-question" name="question" rows="2" required></textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="tf-answer" class="form-label">Correct Answer</label>
-                        <select class="form-select" id="tf-answer" name="answer" required>
-                            <option value="">Select correct answer</option>
-                            <option value="true">True</option>
-                            <option value="false">False</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-main text-light">Save Question</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                </div>
+<div class="modal fade" id="modalMCQ" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header modal-header-custom">
+        <h5 class="modal-title"><i class="bi bi-list-ul me-2"></i> Create Multiple Choice Question</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="formMCQ">
+            <div class="mb-4">
+                <label class="form-label text-secondary fw-bold text-uppercase fs-7">Question</label>
+                <textarea class="form-control" id="mcq_question" rows="3" placeholder="Type your question..." style="font-size: 1.1rem; border-color: #ced4da;" required></textarea>
+            </div>
+            <label class="form-label text-secondary fw-bold text-uppercase fs-7 mb-2">Answer Options</label>
+            <div class="choice-item" onclick="selectRadio('A')">
+                <input class="form-check-input choice-radio" type="radio" name="mcq_correct" value="A" id="radioA">
+                <span class="choice-letter">A.</span>
+                <input type="text" class="choice-input" id="mcq_a" placeholder="Option A" required>
+            </div>
+            <div class="choice-item" onclick="selectRadio('B')">
+                <input class="form-check-input choice-radio" type="radio" name="mcq_correct" value="B" id="radioB">
+                <span class="choice-letter">B.</span>
+                <input type="text" class="choice-input" id="mcq_b" placeholder="Option B" required>
+            </div>
+            <div class="choice-item" onclick="selectRadio('C')">
+                <input class="form-check-input choice-radio" type="radio" name="mcq_correct" value="C" id="radioC">
+                <span class="choice-letter">C.</span>
+                <input type="text" class="choice-input" id="mcq_c" placeholder="Option C" required>
+            </div>
+            <div class="choice-item" onclick="selectRadio('D')">
+                <input class="form-check-input choice-radio" type="radio" name="mcq_correct" value="D" id="radioD">
+                <span class="choice-letter">D.</span>
+                <input type="text" class="choice-input" id="mcq_d" placeholder="Option D" required>
             </div>
         </form>
+      </div>
+      <div class="modal-footer bg-light border-top-0">
+        <button type="button" class="btn btn-outline-secondary px-4 fw-bold" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-main px-4 fw-bold shadow-sm" onclick="saveQuestion('MCQ')">Add Question</button>
+      </div>
     </div>
+  </div>
 </div>
 
-
-<div class="modal fade DONTSHOWHENCREATEONLY" id="identificationModal" tabindex="-1" aria-labelledby="identificationModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <form id="identification-form" method="POST">
-            <input type="hidden" name="requestType" value="InsertIdentification">
-            <input type="hidden" name="assessment_id" class="form-assesment-id" id="form-assesment-id" value="">
-
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="identificationModalLabel">Add Identification Question</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="question" class="form-label">Question</label>
-                        <textarea class="form-control" id="identification-question" name="question" rows="2" required></textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Answer</label>
-                        <input type="text" class="form-control" id="identification_correct_answer" name="answer">
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-main text-light">Save Question</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                </div>
+<div class="modal fade" id="modalTF" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header modal-header-custom">
+        <h5 class="modal-title"><i class="bi bi-toggle-on me-2"></i> True or False</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="formTF">
+            <div class="mb-4">
+                <label class="form-label text-secondary fw-bold text-uppercase fs-7">Question</label>
+                <textarea class="form-control" id="tf_question" rows="3" placeholder="Type your question..." style="font-size: 1.1rem;" required></textarea>
+            </div>
+            <label class="form-label text-secondary fw-bold text-uppercase fs-7 mb-2">Correct Answer</label>
+            <div class="choice-item" onclick="selectRadio('True')">
+                <input class="form-check-input choice-radio" type="radio" name="tf_correct" value="True" id="radioTrue">
+                <span class="choice-letter text-success">T</span>
+                <span class="fw-bold text-secondary">True</span>
+            </div>
+            <div class="choice-item" onclick="selectRadio('False')">
+                <input class="form-check-input choice-radio" type="radio" name="tf_correct" value="False" id="radioFalse">
+                <span class="choice-letter text-danger">F</span>
+                <span class="fw-bold text-secondary">False</span>
             </div>
         </form>
+      </div>
+      <div class="modal-footer bg-light border-top-0">
+        <button type="button" class="btn btn-outline-secondary px-4 fw-bold" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-main px-4 fw-bold shadow-sm" onclick="saveQuestion('TF')">Add Question</button>
+      </div>
     </div>
+  </div>
 </div>
 
-
-<div class="modal fade DONTSHOWHENCREATEONLY" id="jumbledWordsModal" tabindex="-1" aria-labelledby="jumbledWordsModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <form id="jumbled-words-form" method="POST">
-            <input type="hidden" name="requestType" value="InsertJumbledWords">
-            <input type="hidden" name="assessment_id" class="form-assesment-id" id="form-assesment-id" value="">
-
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="jumbledWordsModalLabel">Add Jumbled Word Question</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="question" class="form-label">Word</label>
-                        <textarea class="form-control" id="jumbled-word-question" name="question" rows="2" required></textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Answer</label>
-                        <input type="text" class="form-control" id="jumbled_word_correct_answer" name="answer">
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-main text-light">Save Question</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                </div>
+<div class="modal fade" id="modalIdent" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header modal-header-custom">
+        <h5 class="modal-title"><i class="bi bi-input-cursor-text me-2"></i> Identification</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="formIdent">
+            <div class="mb-4">
+                <label class="form-label text-secondary fw-bold text-uppercase fs-7">Question</label>
+                <textarea class="form-control" id="ident_question" rows="3" placeholder="Type the question..." style="font-size: 1.1rem;" required></textarea>
+            </div>
+            <div class="mb-2">
+                <label class="form-label text-secondary fw-bold text-uppercase fs-7">Correct Answer</label>
+                <input type="text" class="form-control py-2 fw-bold text-main" id="ident_answer" placeholder="Enter exact answer" style="font-size: 1.1rem;" required>
             </div>
         </form>
+      </div>
+      <div class="modal-footer bg-light border-top-0">
+        <button type="button" class="btn btn-outline-secondary px-4 fw-bold" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-main px-4 fw-bold shadow-sm" onclick="saveQuestion('IDENT')">Add Question</button>
+      </div>
     </div>
+  </div>
 </div>
 
+<div class="modal fade" id="modalJumbled" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header modal-header-custom">
+        <h5 class="modal-title"><i class="bi bi-sort-alpha-down me-2"></i> Jumbled Words</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="formJumbled">
+            <div class="mb-4">
+                <label class="form-label text-secondary fw-bold text-uppercase fs-7">Instruction / Hint</label>
+                <textarea class="form-control" id="jumbled_question" rows="2" placeholder="e.g. Arrange the letters..." style="font-size: 1.1rem;" required></textarea>
+            </div>
+            <div class="mb-2">
+                <label class="form-label text-secondary fw-bold text-uppercase fs-7">Correct Word</label>
+                <input type="text" class="form-control py-2 fw-bold text-main" id="jumbled_answer" placeholder="e.g. ELEPHANT" style="font-size: 1.2rem; letter-spacing: 1px;" required>
+            </div>
+        </form>
+      </div>
+      <div class="modal-footer bg-light border-top-0">
+        <button type="button" class="btn btn-outline-secondary px-4 fw-bold" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-main px-4 fw-bold shadow-sm" onclick="saveQuestion('JUMBLED')">Add Question</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-<?php
-include("components/footer-scripts.php");
-?>
-
-<script src="scripts/create_assessment.js"></script>
-
-<?php
-include("components/footer.php");
+<?php include("components/footer-scripts.php"); ?>
+<script src="scripts/create_assessment.js?v=<?= time() ?>"></script>
+<script>
+    $(document).ready(function () {
+        // Sidebar Toggle
+        $(document).off('click', '.sidebar-toggle');
+        $(document).on('click', '.sidebar-toggle', function(e) {
+            e.preventDefault(); e.stopPropagation(); 
+            $(".dashboard-wrapper").toggleClass("toggled");
+        });
+        // Active State
+        $('a.nav-link-custom[href="levels.php"]').addClass('active');
+    });
+</script>
+<?php include("components/footer.php"); ?>

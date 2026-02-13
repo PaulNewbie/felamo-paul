@@ -1,5 +1,7 @@
-<?php
-include("components/header.php");
+<?php 
+include("components/header.php"); 
+
+
 
 // Authorization and Validation
 if (isset($_GET['level'])) {
@@ -23,30 +25,219 @@ if (isset($_GET['level'])) {
 <input type="hidden" id="hidden_user_id" value="<?= $auth_user_id ?>">
 <input type="hidden" id="hidden_level_id" value="<?= $level_id ?>">
 
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="text-main fw-bold mb-0">
-                <i class="bi bi-journals me-2"></i>
-                <?php
-                switch ($level['level']) {
-                    case 1: echo 'Unang Markahan'; break;
-                    case 2: echo 'Pangalawang Markahan'; break;
-                    case 3: echo 'Pangatlong Markahan'; break;
-                    case 4: echo 'Ika-apat na Markahan'; break;
-                    default: echo 'Detalye ng Markahan';
-                }
-                ?>
-            </h4>
-            <small class="text-muted">Manage your lessons and content for this level.</small>
-        </div>
-        <button class="btn btn-main text-light shadow-sm" data-bs-toggle="modal" data-bs-target="#insertAralinModal">
-            <i class="bi bi-plus-lg me-1"></i> New Aralin
+<style>
+    /* --- 1. RESET & LAYOUT --- */
+    nav.navbar { display: none !important; } 
+    body { background-color: #f4f6f9; overflow-x: hidden; }
+
+    /* Dashboard Wrapper */
+    .dashboard-wrapper {
+        display: flex;
+        width: 100%;
+        min-height: 100vh;
+        overflow-x: hidden;
+    }
+
+    /* Main Content Area */
+    .main-content {
+        flex: 1;
+        margin-left: 280px; 
+        padding: 30px 40px;
+        background-color: #f8f9fa;
+        transition: margin-left 0.3s ease-in-out;
+    }
+
+    /* Toggled State */
+    .dashboard-wrapper.toggled .main-content { margin-left: 0 !important; }
+
+    /* --- 2. SIDEBAR INTERNAL STYLES --- */
+    /* These ensure the sidebar looks correct even if sidebar.php is missing styles */
+    .sidebar-profile { 
+        display: flex; align-items: center; gap: 15px; margin-bottom: 30px; 
+        padding-bottom: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.5); 
+    }
+    .sidebar-profile img { 
+        width: 80px !important; height: 80px !important; border-radius: 50%; 
+        object-fit: cover; border: 2px solid white; 
+    }
+    .sidebar-profile h5 { 
+        font-weight: bold; margin: 0; font-size: 1.2rem; 
+        text-transform: uppercase; color: white; 
+    }
+    .nav-link-custom { 
+        display: flex; align-items: center; padding: 12px 15px; color: white; 
+        text-decoration: none; font-weight: 600; margin-bottom: 10px; 
+        transition: 0.3s; border-radius: 5px; 
+    }
+    .nav-link-custom:hover { 
+        background-color: rgba(255, 255, 255, 0.2); color: white; 
+    }
+    /* The Active State (Yellow) */
+    .nav-link-custom.active { 
+        background-color: #FFC107 !important; color: #440101 !important; 
+    }
+    .nav-link-custom i { margin-right: 15px; font-size: 1.2rem; }
+    
+    .logout-btn { 
+        margin-top: auto; background-color: #FFC107; color: black; 
+        font-weight: bold; border: none; width: 100%; padding: 12px; 
+        border-radius: 25px; text-align: center; cursor: pointer; 
+    }
+    .logout-btn:hover { background-color: #e0a800; }
+
+    /* --- HEADER BANNER --- */
+.page-header-banner {
+    background: linear-gradient(90deg, #a71b1b 0%, #880f0b 100%);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    
+    /* Flexbox to align Button and Title side-by-side */
+    display: flex;
+    align-items: center; 
+    gap: 15px; /* Adds space between the button and the text */
+}
+
+/* --- ROUND BACK BUTTON --- */
+.btn-back-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px; 
+    height: 40px;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    border-radius: 50%; /* Makes it a circle */
+    text-decoration: none;
+    transition: all 0.2s;
+    border: 1px solid rgba(255,255,255,0.3);
+    flex-shrink: 0; /* Prevents button from squishing on small screens */
+}
+
+.btn-back-circle:hover {
+    background-color: white;
+    color: #a71b1b;
+    transform: scale(1.05); /* Slight zoom effect */
+}
+
+.btn-back-circle i {
+    font-size: 1.2rem;
+}
+
+/* --- TITLE TEXT --- */
+.header-text {
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 0;
+    line-height: 1; /* Ensures text aligns perfectly center */
+}
+
+    .btn-header-action {
+        background-color: white;
+        color: #a71b1b;
+        border: none;
+        font-size: 0.9rem;
+        font-weight: 700;
+        padding: 8px 20px;
+        border-radius: 50px;
+        text-transform: uppercase;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    .btn-header-action:hover { background-color: #f0f0f0; transform: translateY(-2px); }
+
+    /* --- 4. TABLE STYLES --- */
+    .table-container {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        overflow: hidden;
+        border: 1px solid #dee2e6;
+    }
+    .custom-table { width: 100%; margin-bottom: 0; border-collapse: collapse; }
+    .custom-table thead {
+        background-color: #e9ecef; color: #333; font-weight: 800;
+        text-transform: uppercase; font-size: 0.85rem;
+    }
+    .custom-table th, .custom-table td {
+        padding: 15px 25px; vertical-align: middle; border-bottom: 1px solid #f0f0f0;
+    }
+    .custom-table tbody tr:hover { background-color: #f8f9fa; }
+    .aralin-title { font-weight: 600; color: #212529; font-size: 1rem; }
+    .aralin-summary { color: #6c757d; font-size: 0.9rem; max-width: 400px; }
+
+    /* Action Button (Red) */
+    .btn-action-red {
+        background-color: #c92a2a; color: white; border: none;
+        padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;
+        font-weight: 600; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .btn-action-red:hover { background-color: #a71b1b; color: white; }
+
+    /* Mobile */
+    @media (max-width: 991.98px) {
+        .main-content { margin-left: 0; padding: 1rem; }
+        .page-header-banner { flex-direction: column; gap: 15px; text-align: center; }
+    }
+</style>
+
+<div class="dashboard-wrapper">
+    
+    <?php include("components/sidebar.php"); ?>
+
+    <div class="main-content">
+        
+        <div class="page-header-banner">
+    
+    <div class="header-left">
+        <a href="levels.php" class="btn-back-text">
+            BACK
+        </a>
+        <h4 class="m-0 fw-bold text-uppercase">
+    Detalye ng <?= htmlspecialchars($level['level'] ?? "Markahan") ?>
+</h4>
+    </div>
+
+    <div class="header-right">
+        <button type="button" 
+                class="btn-header-action" 
+                data-bs-toggle="modal" 
+                data-bs-target="#insertAralinModal">
+            <i class="bi bi-plus-circle-fill"></i> INSERT ARALIN
         </button>
     </div>
 
-    <div id="antas-list-container" class="row g-3">
+</div>
+
+        <div class="table-container">
+            <div class="table-responsive">
+                <table class="table custom-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">Aralin</th>
+                            <th style="width: 25%;">Title</th>
+                            <th style="width: 45%;">Summary</th>
+                            <th style="width: 15%; text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="antas-table-body">
+                        <tr>
+                            <td colspan="4" class="text-center py-5">
+                                <div class="spinner-border text-main" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
+
+    </div>
 </div>
 
 <div class="modal fade" id="insertAralinModal" tabindex="-1" aria-hidden="true">
@@ -56,7 +247,7 @@ if (isset($_GET['level'])) {
             <input type="hidden" name="level_id" value="<?= $level_id ?>">
 
             <div class="modal-content">
-                <div class="modal-header bg-main text-white">
+                <div class="modal-header bg-main text-white" style="background: linear-gradient(90deg, #a71b1b 0%, #880f0b 100%);">
                     <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Add New Aralin</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
@@ -67,23 +258,22 @@ if (isset($_GET['level'])) {
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Summary (Short Description)</label>
-                            <textarea class="form-control" name="summary" rows="4" placeholder="Brief overview displayed on the card..." required></textarea>
+                            <label class="form-label fw-bold">Summary</label>
+                            <textarea class="form-control" name="summary" rows="4" required></textarea>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Full Details</label>
-                            <textarea class="form-control" name="details" rows="4" placeholder="In-depth content..." required></textarea>
+                            <textarea class="form-control" name="details" rows="4" required></textarea>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Upload Video Material</label>
+                        <label class="form-label fw-bold">Upload Video</label>
                         <input type="file" class="form-control" name="attachment" accept="video/*" required>
-                        <small class="text-muted">Supported formats: mp4, webm, mov</small>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-main text-light">Save Lesson</button>
+                    <button type="submit" class="btn btn-main text-light" style="background-color: #a71b1b; color: white;">Save Lesson</button>
                 </div>
             </div>
         </form>
@@ -98,7 +288,7 @@ if (isset($_GET['level'])) {
             <input type="hidden" name="level_id" value="<?= $level_id ?>">
 
             <div class="modal-content">
-                <div class="modal-header bg-main text-white">
+                <div class="modal-header bg-main text-white" style="background: linear-gradient(90deg, #a71b1b 0%, #880f0b 100%);">
                     <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Edit Aralin</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
@@ -120,8 +310,8 @@ if (isset($_GET['level'])) {
                     <div class="mb-3">
                         <label class="form-label fw-bold">Current Video</label>
                         <div class="p-2 border rounded bg-light d-flex align-items-center justify-content-between">
-                            <span class="text-muted"><i class="bi bi-film me-2"></i>Current file attached</span>
-                            <a href="#" target="_blank" id="current-video-link" class="btn btn-sm btn-outline-primary">Preview Video</a>
+                            <span class="text-muted" id="current-video-text"><i class="bi bi-film me-2"></i>Current file attached</span>
+                            <a href="#" target="_blank" id="current-video-link" class="btn btn-sm btn-outline-primary">Preview</a>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -131,7 +321,7 @@ if (isset($_GET['level'])) {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-main text-light">Update Changes</button>
+                    <button type="submit" class="btn btn-main text-light" style="background-color: #a71b1b; color: white;">Update Changes</button>
                 </div>
             </div>
         </form>
@@ -139,5 +329,25 @@ if (isset($_GET['level'])) {
 </div>
 
 <?php include("components/footer-scripts.php"); ?>
-<script src="scripts/levelsDetails.js?v=2"></script>
+<script src="scripts/levelsDetails.js?v=6"></script>
+
+<script>
+    $(document).ready(function () {
+        // Toggle Sidebar
+        $(document).off('click', '.sidebar-toggle');
+        $(document).on('click', '.sidebar-toggle', function(e) {
+            e.preventDefault();
+            e.stopPropagation(); 
+            $(".dashboard-wrapper").toggleClass("toggled");
+        });
+
+        // =========================================================
+        // === FIX: FORCE "MARKAHAN" SIDEBAR ITEM TO STAY ACTIVE ===
+        // =========================================================
+        // Finds the link that points to "levels.php" and adds the 'active' class
+        // This makes the yellow highlight stay even though we are on level_details.php
+        $('a.nav-link-custom[href="levels.php"]').addClass('active');
+    });
+</script>
+
 <?php include("components/footer.php"); ?>
