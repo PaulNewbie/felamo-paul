@@ -3,26 +3,27 @@ $(document).ready(function () {
     const level_id = $("#hidden_level_id").val();
 
     const loadTakenAssessments = () => {
+        // 1. Set Loading State (Just Icon, No Text)
+        $("#taken-assessments-list").html(`
+            <tr>
+                <td colspan="5" class="text-center py-5">
+                    <div class="spinner-border text-secondary" role="status" style="width: 2rem; height: 2rem; border-width: 0.25em;"></div>
+                </td>
+            </tr>
+        `);
+
         $.ajax({
             type: "POST",
             url: "../backend/api/web/taken_assessment.php",
             data: { 
-                // MATCHING FIX: This must match the PHP if statement exactly
                 requestType: "GetTakenAssessments", 
                 level_id: level_id,
                 teacher_id: auth_user_id,
-                // MATCHING FIX: Added the filter parameter your PHP expects
                 filter: "all" 
             },
-            dataType: "json", // Ensure we expect JSON
+            dataType: "json", 
             success: function (response) {
-                // Adjust this check based on how your Controller returns data
-                // Some controllers return arrays directly, others return {status: 'success', data: [...]}
-                // I will assume your controller returns the array of data directly or inside a 'data' key.
-                
                 let data = response.data ? response.data : response; 
-                
-                // If response is just the array (common in some setups)
                 if (Array.isArray(response)) {
                     data = response;
                 }
@@ -32,53 +33,50 @@ $(document).ready(function () {
                 if (!data || data.length === 0) {
                     html = `
                         <tr>
-                            <td colspan="5" class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
-                                No assessments taken yet for this level.
+                            <td colspan="5" class="text-center py-5 text-muted fw-bold">
+                                No assessments found.
                             </td>
                         </tr>`;
                 } else {
                     data.forEach((item) => {
-                        // Handle Date Formatting safely
-                        let dateTaken = item.created_at || "N/A";
+                        let id = item.id;
+                        let title = item.assessment_title || item.title || "Untitled Assessment";
+                        let studentName = item.student_name || item.fullname || "Unknown Student";
+                        let score = item.score || 0;
+                        let total = item.total_items || 0;
                         
-                        // Handle Student Name (adjust key based on your DB columns)
-                        let studentName = item.student_name || item.fullname || "Student";
-                        
-                        // Handle Title
-                        let title = item.assessment_title || item.title || "Assessment";
+                        // Date Formatting
+                        let dateTaken = "N/A";
+                        if (item.created_at) {
+                            let dateObj = new Date(item.created_at);
+                            if (!isNaN(dateObj)) {
+                                dateTaken = dateObj.toLocaleDateString('en-US', { 
+                                    year: 'numeric', month: 'short', day: 'numeric' 
+                                });
+                            }
+                        }
 
+                        // Status Color
+                        let scorePercent = total > 0 ? (score / total) * 100 : 0;
+                        let badgeClass = scorePercent >= 75 ? "bg-success" : (scorePercent >= 50 ? "bg-warning text-dark" : "bg-danger");
+
+                        // 5-Column Row (Matches PHP Header)
                         html += `
-                            <tr>
-                                <td>
-                                    <div class="fw-bold text-dark">${title}</div>
-                                </td>
-                                <td>
-                                    <div class="fw-bold text-secondary">
-                                        <i class="bi bi-person-circle me-2"></i> ${studentName}
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="text-date">${dateTaken}</span>
-                                </td>
-                                <td>
-                                    <span class="badge-score">${item.score} / ${item.total_items}</span>
-                                </td>
-                                <td style="text-align: right;">
-                                    <div class="dropdown">
-                                        <button class="btn-action-red dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                            Action
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end shadow">
-                                            <li>
-                                                <a class="dropdown-item" href="view_result.php?id=${item.id}">
-                                                    <i class="bi bi-eye me-2"></i> View Results
-                                                </a>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </td>
-                            </tr>
+                        <tr>
+                            <td class="fw-bold text-dark">${title}</td>
+                            <td class="fw-semibold text-secondary">${studentName}</td>
+                            <td class="text-date">${dateTaken}</td>
+                            <td>
+                                <span class="badge ${badgeClass} rounded-pill px-3">
+                                    ${score} / ${total}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <a href="view_result.php?id=${id}" class="btn-action-red">
+                                    <i class="bi bi-eye-fill"></i> View
+                                </a>
+                            </td>
+                        </tr>
                         `;
                     });
                 }
@@ -88,8 +86,8 @@ $(document).ready(function () {
                 console.error("AJAX Error:", xhr.responseText);
                 $("#taken-assessments-list").html(`
                     <tr>
-                        <td colspan="5" class="text-center text-danger py-4">
-                            Error loading data: ${xhr.statusText}
+                        <td colspan="5" class="text-center text-danger py-4 fw-bold">
+                            <i class="bi bi-exclamation-circle me-2"></i> Failed to load data.
                         </td>
                     </tr>
                 `);

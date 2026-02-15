@@ -5,7 +5,20 @@ if (isset($_GET['level'])) {
     $level_id = $_GET['level'];
     $levelResult = $AuthController->GetUsingId("levels", $level_id);
     if ($levelResult && $levelResult->num_rows > 0) {
-        $levelData = $levelResult->fetch_assoc();
+        $level = $levelResult->fetch_assoc();
+
+        // --- ADDED: Number to Word Mapping ---
+        $levelNum = $level['level'];
+        $ordinalMap = [
+            1 => "Unang",
+            2 => "Ikalawang",
+            3 => "Ikatlong",
+            4 => "Ika-apat" // Mapped exactly as requested
+        ];
+        // Default to the number if not in map
+        $levelText = isset($ordinalMap[$levelNum]) ? $ordinalMap[$levelNum] : $levelNum;
+        // -------------------------------------
+
     } else {
         header("Location: levels.php");
         exit();
@@ -46,12 +59,28 @@ if (isset($_GET['level'])) {
     }
     .header-text { display: flex; align-items: center; }
     .header-text i { margin-right: 15px; font-size: 1.8rem; }
-    .btn-back {
-        background-color: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.5);
-        font-size: 0.9rem; font-weight: 600; padding: 8px 20px; border-radius: 50px; text-decoration: none;
-        transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+    
+    /* Back Button Style */
+    .btn-back-text {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: white;
+        font-size: 0.85rem;
+        font-weight: 700;
+        padding: 8px 18px;
+        border-radius: 50px;
+        text-decoration: none;
+        text-transform: uppercase;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
-    .btn-back:hover { background-color: white; color: #a71b1b; }
+    .btn-back-text:hover {
+        background-color: white;
+        color: #a71b1b;
+        transform: scale(1.02);
+    }
 
     /* --- TITLES & INPUTS --- */
     .section-title {
@@ -79,52 +108,24 @@ if (isset($_GET['level'])) {
         font-size: 1rem; letter-spacing: 0.5px; margin-bottom: 20px;
     }
 
-    /* --- BUTTONS & FILE INPUTS (UPDATED COLORS) --- */
-    
-    /* 1. Create Manually Button - SOLID RED */
+    /* --- BUTTONS & FILE INPUTS --- */
     .btn-create-manual { 
-        background-color: #a71b1b; 
-        color: white; 
-        border: 1px solid #a71b1b;
-        font-weight: 600; 
-        padding: 6px 12px; 
-        border-radius: 4px; 
-        transition: 0.2s; 
-        white-space: nowrap; 
-        font-size: 0.9rem;
+        background-color: #a71b1b; color: white; border: 1px solid #a71b1b;
+        font-weight: 600; padding: 6px 12px; border-radius: 4px; 
+        transition: 0.2s; white-space: nowrap; font-size: 0.9rem;
     }
-    .btn-create-manual:hover { 
-        background-color: #880f0b; 
-        color: white; 
-        border-color: #880f0b;
-    }
+    .btn-create-manual:hover { background-color: #880f0b; color: white; border-color: #880f0b; }
 
-    /* 2. Choose File Input - CUSTOM RED STYLING */
     .custom-file-input {
-        border: 1px solid #a71b1b;
-        border-radius: 4px;
-        color: #a71b1b;
-        font-size: 0.85rem;
-        background-color: white;
-        padding: 0; /* Important for file inputs */
+        border: 1px solid #a71b1b; border-radius: 4px; color: #a71b1b;
+        font-size: 0.85rem; background-color: white; padding: 0;
     }
-    
-    /* Style the internal "Choose File" button */
     .custom-file-input::file-selector-button {
-        background-color: #a71b1b;
-        color: white;
-        border: none;
-        border-right: 1px solid #880f0b;
-        padding: 7px 12px;
-        margin-right: 10px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: 0.2s;
+        background-color: #a71b1b; color: white; border: none;
+        border-right: 1px solid #880f0b; padding: 7px 12px;
+        margin-right: 10px; font-weight: 600; cursor: pointer; transition: 0.2s;
     }
-    
-    .custom-file-input:hover::file-selector-button {
-        background-color: #880f0b;
-    }
+    .custom-file-input:hover::file-selector-button { background-color: #880f0b; }
 
     /* --- PREVIEW LIST --- */
     .added-question-item { border-left: 4px solid #a71b1b; background: #fff; padding: 15px; margin-bottom: 10px; border-radius: 4px; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
@@ -156,19 +157,18 @@ if (isset($_GET['level'])) {
     <div class="main-content">
         <div class="page-header-banner">
     
-    <div class="header-left" style="display: flex; align-items: center; gap: 15px;">
-        <a href="levels.php" class="btn-back-text">
-            BACK
-        </a>
-        <h4 class="m-0 fw-bold text-uppercase">
-            Detalye ng <?= htmlspecialchars($level['level'] ?? "Markahan") ?>
-        </h4>
-    </div>
+            <div class="header-left" style="display: flex; align-items: center; gap: 15px;">
+                <a href="levels.php" class="btn-back-text">
+                    BACK
+                </a>
+                <h4 class="m-0 fw-bold text-uppercase">
+                    Assessment ng <?= htmlspecialchars($levelText) ?> Markahan
+                </h4>
+            </div>
 
-    <div class="header-right">
+            <div class="header-right"></div>
+
         </div>
-
-</div>
 
         <form id="create-assessment-form" enctype="multipart/form-data">
             

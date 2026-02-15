@@ -560,3 +560,51 @@ html {
     margin-bottom: 0; /* Prevents the title from sitting higher than the button */
     line-height: 1;
 }
+
+/* --- FIXED HEIGHT HEADER BANNER --- */
+    .page-header-banner {
+        background: linear-gradient(90deg, #a71b1b 0%, #880f0b 100%);
+        color: white; 
+        padding: 0 30px; /* Remove top/bottom padding, rely on height */
+        border-radius: 8px; 
+        margin-bottom: 25px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+        
+        /* Flexbox Settings */
+        display: flex; 
+        align-items: center; 
+        justify-content: space-between;
+        
+        /* FIX THE SHAPE */
+        height: 80px; /* Fixed height */
+        min-height: 80px; /* Prevents shrinking */
+    }
+
+    /* Ensure text doesn't break the layout */
+    .page-header-banner h4 {
+        margin: 0;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 1.5rem;
+        line-height: 1; /* Tighter line height prevents expansion */
+        white-space: nowrap; /* Optional: prevents wrapping if you want strictly one line */
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Adjust Mobile View */
+    @media (max-width: 991.98px) { 
+        .page-header-banner { 
+            height: auto; /* Let it grow on mobile if needed */
+            min-height: 100px;
+            padding: 20px;
+            flex-direction: column; 
+            gap: 15px; 
+            text-align: center; 
+        } 
+        
+        .page-header-banner h4 {
+            white-space: normal; /* Allow wrapping on mobile */
+            font-size: 1.2rem;
+        }
+    }

@@ -1,8 +1,6 @@
 <?php 
 include("components/header.php"); 
 
-
-
 // Authorization and Validation
 if (isset($_GET['level'])) {
     $level_id = $_GET['level'];
@@ -10,6 +8,17 @@ if (isset($_GET['level'])) {
 
     if ($levelResult->num_rows > 0) {
         $level = $levelResult->fetch_assoc();
+
+        // --- Number to Word Mapping ---
+        $levelNum = $level['level'];
+        $ordinalMap = [
+            1 => "Unang",
+            2 => "Ikalawang",
+            3 => "Ikatlong",
+            4 => "Ika-apat na" 
+        ];
+        $levelText = isset($ordinalMap[$levelNum]) ? $ordinalMap[$levelNum] : $levelNum;
+
         if ($level['teacher_id'] != $auth_user_id) {
             header("Location: ../index.php");
         }
@@ -51,7 +60,6 @@ if (isset($_GET['level'])) {
     .dashboard-wrapper.toggled .main-content { margin-left: 0 !important; }
 
     /* --- 2. SIDEBAR INTERNAL STYLES --- */
-    /* These ensure the sidebar looks correct even if sidebar.php is missing styles */
     .sidebar-profile { 
         display: flex; align-items: center; gap: 15px; margin-bottom: 30px; 
         padding-bottom: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.5); 
@@ -86,54 +94,56 @@ if (isset($_GET['level'])) {
     .logout-btn:hover { background-color: #e0a800; }
 
     /* --- HEADER BANNER --- */
-.page-header-banner {
-    background: linear-gradient(90deg, #a71b1b 0%, #880f0b 100%);
-    color: white;
-    padding: 15px 25px;
-    border-radius: 8px;
-    margin-bottom: 25px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    
-    /* Flexbox to align Button and Title side-by-side */
-    display: flex;
-    align-items: center; 
-    gap: 15px; /* Adds space between the button and the text */
-}
+    .page-header-banner {
+        background: linear-gradient(90deg, #a71b1b 0%, #880f0b 100%);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 8px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center; 
+        justify-content: space-between; 
+    }
 
-/* --- ROUND BACK BUTTON --- */
-.btn-back-circle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px; 
-    height: 40px;
-    background-color: rgba(255, 255, 255, 0.2);
-    color: white;
-    border-radius: 50%; /* Makes it a circle */
-    text-decoration: none;
-    transition: all 0.2s;
-    border: 1px solid rgba(255,255,255,0.3);
-    flex-shrink: 0; /* Prevents button from squishing on small screens */
-}
+    /* Left Side Grouping */
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
 
-.btn-back-circle:hover {
-    background-color: white;
-    color: #a71b1b;
-    transform: scale(1.05); /* Slight zoom effect */
-}
+    /* --- ROUND BACK BUTTON (Matches create_assessment.php) --- */
+    .btn-back-text {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: white;
+        font-size: 0.85rem;
+        font-weight: 700;
+        padding: 8px 18px;
+        border-radius: 50px;
+        text-decoration: none;
+        text-transform: uppercase;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-.btn-back-circle i {
-    font-size: 1.2rem;
-}
+    .btn-back-text:hover {
+        background-color: white;
+        color: #a71b1b;
+        transform: scale(1.02);
+    }
 
-/* --- TITLE TEXT --- */
-.header-text {
-    font-size: 1.5rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    margin: 0;
-    line-height: 1; /* Ensures text aligns perfectly center */
-}
+    /* --- TITLE TEXT --- */
+    .header-text {
+        font-size: 1.5rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin: 0;
+        line-height: 1; 
+    }
 
     .btn-header-action {
         background-color: white;
@@ -193,25 +203,26 @@ if (isset($_GET['level'])) {
         
         <div class="page-header-banner">
     
-    <div class="header-left">
-        <a href="levels.php" class="btn-back-text">
+            <div class="header-left">
+                <a href="levels.php" class="btn-back-text">
             BACK
         </a>
-        <h4 class="m-0 fw-bold text-uppercase">
-    Detalye ng <?= htmlspecialchars($level['level'] ?? "Markahan") ?>
-</h4>
-    </div>
+                
+                <h4 class="m-0 fw-bold text-uppercase">
+                    Aralin ng <?= htmlspecialchars($levelText) ?> Markahan
+                </h4>
+            </div>
 
-    <div class="header-right">
-        <button type="button" 
-                class="btn-header-action" 
-                data-bs-toggle="modal" 
-                data-bs-target="#insertAralinModal">
-            <i class="bi bi-plus-circle-fill"></i> INSERT ARALIN
-        </button>
-    </div>
+            <div class="header-right">
+                <button type="button" 
+                        class="btn-header-action" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#insertAralinModal">
+                    <i class="bi bi-plus-circle-fill me-2"></i> INSERT ARALIN
+                </button>
+            </div>
 
-</div>
+        </div>
 
         <div class="table-container">
             <div class="table-responsive">
@@ -341,11 +352,7 @@ if (isset($_GET['level'])) {
             $(".dashboard-wrapper").toggleClass("toggled");
         });
 
-        // =========================================================
-        // === FIX: FORCE "MARKAHAN" SIDEBAR ITEM TO STAY ACTIVE ===
-        // =========================================================
-        // Finds the link that points to "levels.php" and adds the 'active' class
-        // This makes the yellow highlight stay even though we are on level_details.php
+        // Maintain 'active' class for the sidebar link
         $('a.nav-link-custom[href="levels.php"]').addClass('active');
     });
 </script>

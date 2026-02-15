@@ -263,8 +263,10 @@ $isSuperAdmin = $user['role'] === 'super_admin';
                                     if(levelKey) {
                                         $(`#${levelKey}-markahan-no-of-passed-student`).text(stat.passed_count);
                                         $(`#${levelKey}-markahan-no-of-failed-student`).text(stat.failed_count);
-                                        // FIX: Set the View Details Link
-                                        $(`#link-${levelKey}-markahan`).attr('href', `level_details.php?level=${stat.id}`);
+                                        
+                                        // --- UPDATED LINK HERE ---
+                                        // Changed from level_details.php to taken_assessments.php
+                                        $(`#link-${levelKey}-markahan`).attr('href', `taken_assessments.php?level=${stat.id}`);
                                     }
 
                                     // 2. Fill Chart Data Arrays (safely)
