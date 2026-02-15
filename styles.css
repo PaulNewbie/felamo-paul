@@ -1,0 +1,70 @@
+:root {
+  --main-color: #880f0b;
+}
+
+body,
+html {
+  height: 100%;
+}
+
+.bg-main {
+  background-color: var(--main-color) !important;
+}
+
+.btn-main {
+  background-color: var(--main-color);
+  border: none;
+}
+
+.btn-main:hover {
+  background-color: #6e0b08;
+}
+
+.text-main {
+  color: var(--main-color);
+}
+
+.link-main {
+  color: var(--main-color);
+  text-decoration: none;
+}
+
+.link-main:hover {
+  text-decoration: underline;
+}
+
+.card {
+  border: none;
+  border-radius: 1rem;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-menu.bg-main {
+  border: none;
+  /* background-color: #343a40; */
+}
+
+.dropdown-menu.bg-main .dropdown-item {
+  color: #f8f9fa;
+  background-color: transparent;
+}
+
+.dropdown-menu.bg-main .dropdown-item:hover,
+.dropdown-menu.bg-main .dropdown-item:focus {
+  /* background-color: #495057; */
+  color: #d4d4d4;
+}
+
+.login-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #880f0bb3, #c03a2be1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+#alert {
+  position: fixed;
+  z-index: 10000;
+}
