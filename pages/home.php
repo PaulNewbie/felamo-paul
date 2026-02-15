@@ -1,6 +1,5 @@
 <?php
 include("components/header.php");
-
 $isSuperAdmin = $user['role'] === 'super_admin';
 ?>
 
@@ -8,614 +7,338 @@ $isSuperAdmin = $user['role'] === 'super_admin';
 <input type="hidden" id="hidden_is_super_admin" value="<?= $isSuperAdmin ? 'true' : 'false' ?>">
 
 <style>
-    .card {
-        background-color: white;
+    /* --- FORCE RESET --- */
+    .navbar { display: none !important; }
+    body { background-color: #f4f6f9; overflow-x: hidden; }
+    
+    /* Wrapper Layout */
+    .dashboard-wrapper { 
+        display: flex; 
+        min-height: 100vh; 
+        width: 100%; 
+        overflow-x: hidden; 
+    }
+
+    /* --- SIDEBAR STYLES (SMOOTH SLIDE FIX) --- */
+    .sidebar { 
+        width: 280px !important;
+        background: linear-gradient(180deg, #a71b1b 0%, #880f0b 100%); 
+        color: white; 
+        display: flex; 
+        flex-direction: column; 
+        padding: 20px; 
+        position: fixed; 
+        height: 100vh; 
+        z-index: 9000 !important;
+        left: 0 !important; 
+        top: 0;
+        
+        /* USE TRANSFORM FOR SMOOTH SLIDING */
+        transform: translateX(0);
+        transition: transform 0.3s ease-in-out; 
+        
+        overflow: visible !important;
+    }
+
+    /* --- BUTTON STYLES --- */
+    .sidebar-toggle { 
+        position: absolute !important;
+        right: -30px !important;
+        top: 50% !important;
+        width: 30px !important; 
+        height: 60px !important; 
+        background-color: #FFC107 !important;
+        border: 2px solid #880f0b !important;
+        border-left: none !important;
+        border-radius: 0 8px 8px 0 !important; 
+        display: flex !important; 
+        align-items: center; 
+        justify-content: center; 
+        cursor: pointer; 
+        color: #000 !important;
+        z-index: 9999 !important;
+        box-shadow: 4px 0 5px rgba(0,0,0,0.2) !important;
+    }
+    
+    /* Smooth arrow rotation */
+    .sidebar-toggle i {
+        transition: transform 0.3s ease-in-out;
+    }
+
+    /* --- CLOSED STATE (TRANSFORM LOGIC) --- */
+    .dashboard-wrapper.toggled .sidebar { 
+        /* Move sidebar to the left by its own width */
+        transform: translateX(-280px); 
+    }
+
+    .dashboard-wrapper.toggled .main-content { 
+        /* Remove margin so content expands */
+        margin-left: 0 !important; 
+    }
+
+    .dashboard-wrapper.toggled .sidebar-toggle i { 
+        transform: rotate(180deg); 
+    }
+
+    /* --- MAIN CONTENT --- */
+    .main-content { 
+        flex: 1; 
+        margin-left: 280px; /* Default open state margin */
+        padding: 30px 40px; 
+        
+        /* Animate the margin change */
+        transition: margin-left 0.3s ease-in-out; 
+    }
+
+    /* --- REST OF DASHBOARD STYLES (UNCHANGED) --- */
+    .sidebar-profile { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.5); }
+    .sidebar-profile img { width: 80px !important; height: 80px !important; border-radius: 50%; object-fit: cover; border: 2px solid white; max-width: 100%; display: block; }
+    .sidebar-profile h5 { font-weight: bold; margin: 0; font-size: 1.2rem; text-transform: uppercase; }
+    
+    .nav-link-custom { display: flex; align-items: center; padding: 12px 15px; color: white; text-decoration: none; font-weight: 600; margin-bottom: 10px; transition: 0.3s; border-radius: 5px; }
+    .nav-link-custom:hover { background-color: rgba(255, 255, 255, 0.2); color: white; }
+    .nav-link-custom.active { background-color: #FFC107; color: #440101; }
+    .nav-link-custom i { margin-right: 15px; font-size: 1.2rem; }
+
+    .logout-btn { margin-top: auto; background-color: #FFC107; color: black; font-weight: bold; border: none; width: 100%; padding: 12px; border-radius: 25px; text-align: center; text-decoration: none; cursor: pointer; }
+    .logout-btn:hover { background-color: #e0a800; color: black; }
+
+    .page-header { background: linear-gradient(180deg, #a71b1b 0%, #880f0b 100%); color: white; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 1.5rem; margin-bottom: 20px; text-transform: uppercase; }
+    .stats-card { border: none; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); height: 100%; transition: transform 0.3s ease, box-shadow 0.3s ease; cursor: pointer; }
+    .stats-card:hover { transform: translateY(-8px); box-shadow: 0 12px 20px rgb(144, 5, 5); }
+    .stats-header { background: linear-gradient(180deg, #880f0b 0%, #ce3c3c 100%); color: white; padding: 10px; text-align: center; font-weight: bold; font-size: 1.1rem; }
+    .stats-body { background-color: #e5e5e5; padding: 20px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 150px; shadow: #880f0b;}
+    .stats-label { font-size: 0.9rem; font-weight: bold; color: #333; margin-bottom: 5px; }
+    .stats-count { font-size: 3.5rem; font-weight: bold; color: #880f0b; line-height: 1; }
+    
+    @media print {
+        .sidebar, .action-buttons, .sidebar-toggle { display: none !important; }
+        .main-content { margin-left: 0 !important; width: 100%; }
+        .page-header { -webkit-print-color-adjust: exact; }
     }
 </style>
 
-<div class="container py-4">
+<div class="dashboard-wrapper">
+    
+    <?php include("components/sidebar.php"); ?>
 
-    <div class="d-flex justify-content-between align-items-center">
-        <h2 class="text-main mb-4">Hello, <?= $user['name'] ?>!</h2>
-
-        <div>
-            <button class="btn btn-sm btn-main text-light" id="btnDownload"><i class="bi bi-box-arrow-down"></i> Download</button>
-            <button class="btn btn-sm btn-main text-light" id="btnDownloadStudentData"><i class="bi bi-box-arrow-down"></i> Download Student Data</button>
+    <main class="main-content">
+        <div class="page-header">DASHBOARD</div>
+        
+        <div class="d-flex justify-content-end mb-4 gap-2 action-buttons">
+            <button class="btn btn-main text-light" style="background-color: #880f0b;" id="btnDownload"><i class="bi bi-box-arrow-down"></i> Download Dashboard</button>
+            <button class="btn btn-main text-light" style="background-color: #880f0b;" id="btnDownloadStudentData"><i class="bi bi-file-earmark-spreadsheet"></i> Download Student Data</button>
         </div>
-    </div>
 
-    <?php if ($user['role'] == "teacher") { ?>
-        <div class="row">
-            <div class="col-md-6 col-lg-3 mb-2">
-                <div class="card p-3 text-main">
-                    <h6 class=""><i class="bi bi-1-circle-fill"></i> Unang Markahan</h6>
-                    <hr class="mt-1">
-                    <div class="d-flex justify-content-between gap-1">
-                        <div class="card py-2 px-3 text-main w-50">
-                            <div style="font-size: 13px;">Failed</div>
-                            <h5 class="text-center"><i class="bi bi-people"></i> <span id="unang-markahan-no-of-failed-student">0</span></h5>
-                        </div>
-                        <div class="card py-2 px-3 text-main w-50">
-                            <div style="font-size: 13px;">Passed</div>
-                            <h5 class="text-center"><i class="bi bi-people"></i> <span id="unang-markahan-no-of-passed-student">0</span></h5>
-                        </div>
-                    </div>
-
-                    <a id="link-unang-markahan" class="btn btn-main text-light my-2 d-flex align-items-center justify-content-center" style="height: 20px; font-size: 11px;">
-                        <span>
-                            View Details
-                        </span>
-                    </a>
-
-                    <div class="card py-2 px-3 text-main mt-1">
-                        <div class="card-label" style="font-size: 13px;">Students Completed All Videos</div>
-                        <h5 class="text-center">
-                            <i class="bi bi-people"></i>
-                            <span id="unang-markahan-student-video-completion-count">0</span>
-                        </h5>
-                    </div>
-
-                </div>
-            </div>
-
-            <div class="col-md-6 col-lg-3 mb-2">
-                <div class="card p-3 text-main">
-                    <h6 class=""><i class="bi bi-2-circle-fill"></i> Pangalawang Markahan</h6>
-                    <hr class="mt-1">
-                    <div class="d-flex justify-content-between gap-1">
-                        <div class="card py-2 px-3 text-main w-50">
-                            <div style="font-size: 13px;">Failed</div>
-                            <h5 class="text-center"><i class="bi bi-people"></i> <span id="pangalawang-markahan-no-of-failed-student">0</span></h5>
-                        </div>
-                        <div class="card py-2 px-3 text-main w-50">
-                            <div style="font-size: 13px;">Passed</div>
-                            <h5 class="text-center"><i class="bi bi-people"></i> <span id="pangalawang-markahan-no-of-passed-student">0</span></h5>
-                        </div>
-                    </div>
-
-                    <a id="link-pangalawang-markahan" class="btn btn-main text-light my-2 d-flex align-items-center justify-content-center" style="height: 20px; font-size: 11px;">
-                        <span>
-                            View Details
-                        </span>
-                    </a>
-
-                    <div class="card py-2 px-3 text-main mt-1">
-                        <div class="card-label" style="font-size: 13px;">Students Completed All Videos</div>
-                        <h5 class="text-center">
-                            <i class="bi bi-people"></i>
-                            <span id="pangalawang-markahan-student-video-completion-count">0</span>
-                        </h5>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6 col-lg-3 mb-2">
-                <div class="card p-3 text-main">
-                    <h6 class=""><i class="bi bi-3-circle-fill"></i> Pangatlong Markahan</h6>
-                    <hr class="mt-1">
-                    <div class="d-flex justify-content-between gap-1">
-                        <div class="card py-2 px-3 text-main w-50">
-                            <div style="font-size: 13px;">Failed</div>
-                            <h5 class="text-center"><i class="bi bi-people"></i> <span id="pangatlong-markahan-no-of-failed-student">0</span></h5>
-                        </div>
-                        <div class="card py-2 px-3 text-main w-50">
-                            <div style="font-size: 13px;">Passed</div>
-                            <h5 class="text-center"><i class="bi bi-people"></i> <span id="pangatlong-markahan-no-of-passed-student">0</span></h5>
-                        </div>
-                    </div>
-
-                    <a id="link-pangatlong-markahan" class="btn btn-main text-light my-2 d-flex align-items-center justify-content-center" style="height: 20px; font-size: 11px;">
-                        <span>
-                            View Details
-                        </span>
-                    </a>
-
-                    <div class="card py-2 px-3 text-main mt-1">
-                        <div class="card-label" style="font-size: 13px;">Students Completed All Videos</div>
-                        <h5 class="text-center">
-                            <i class="bi bi-people"></i>
-                            <span id="pangatlong-markahan-student-video-completion-count">0</span>
-                        </h5>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6 col-lg-3 mb-2">
-                <div class="card p-3 text-main">
-                    <h6 class=""><i class="bi bi-4-circle-fill"></i> Ika-apat Markahan</h5>
-                        <hr class="mt-1">
-                        <div class="d-flex justify-content-between gap-1">
-                            <div class="card py-2 px-3 text-main w-50">
-                                <div style="font-size: 13px;">Failed</div>
-                                <h5 class="text-center"><i class="bi bi-people"></i> <span id="ika-apat-na-markahan-no-of-failed-student">0</span></h5>
+        <?php if ($user['role'] == "teacher") { ?>
+            <div class="row g-4">
+                <?php $markahans = [['id'=>'unang','title'=>'Unang Markahan'],['id'=>'pangalawang','title'=>'Pangalawang Markahan'],['id'=>'pangatlong','title'=>'Pangatlong Markahan'],['id'=>'ika-apat-na','title'=>'Ika-apat na Markahan']]; foreach ($markahans as $m) { ?>
+                <div class="col-md-6 col-lg-3">
+                    <div class="stats-card">
+                        <div class="stats-header"><?= $m['title'] ?></div>
+                        <div class="stats-body" style="height: auto; padding-bottom: 10px;">
+                            <div class="row w-100">
+                                <div class="col-6"><div style="font-size: 12px;">Passed</div><h4 class="text-main fw-bold" id="<?= $m['id'] ?>-markahan-no-of-passed-student">0</h4></div>
+                                <div class="col-6"><div style="font-size: 12px;">Failed</div><h4 class="text-main fw-bold" id="<?= $m['id'] ?>-markahan-no-of-failed-student">0</h4></div>
                             </div>
-                            <div class="card py-2 px-3 text-main w-50">
-                                <div style="font-size: 13px;">Passed</div>
-                                <h5 class="text-center"><i class="bi bi-people"></i> <span id="ika-apat-na-markahan-no-of-passed-student">0</span></h5>
-                            </div>
+                            <hr class="w-100 my-2">
+                            <div class="stats-label">Completed All Videos</div>
+                            <h3 class="stats-count" style="font-size: 2rem;" id="<?= $m['id'] ?>-markahan-student-video-completion-count">0</h3>
+                            <a id="link-<?= $m['id'] ?>-markahan" class="btn btn-sm btn-main text-light mt-2 w-100" style="background-color: #880f0b;">View Details</a>
                         </div>
-
-                        <a id="link-ika-apat-na-markahan" class="btn btn-main text-light my-2 d-flex align-items-center justify-content-center" style="height: 20px; font-size: 11px;">
-                            <span>
-                                View Details
-                            </span>
-                        </a>
-
-                        <div class="card py-2 px-3 text-main mt-1">
-                            <div class="card-label" style="font-size: 13px;">Students Completed All Videos</div>
-                            <h5 class="text-center">
-                                <i class="bi bi-people"></i>
-                                <span id="ika-apat-na-markahan-student-video-completion-count">0</span>
-                            </h5>
-                        </div>
-                </div>
-            </div>
-
-        </div>
-
-        <hr>
-
-        <div class="row">
-            <div class="col-md-6 mb-2">
-                <div class="card p-3 text-main">
-                    <h6 class=""><i class="bi bi-person-lines-fill"></i> Total Sections</h6>
-                    <hr class="mt-1">
-                    <div class="card py-2 px-3 text-main mt-1">
-                        <div class="card-label" style="font-size: 13px;">Number of Assign Section</div>
-                        <h5 class="text-center">
-                            <i class="bi bi-people"></i>
-                            <span id="dashboard-my-section-count-count">0</span>
-                        </h5>
                     </div>
                 </div>
+                <?php } ?>
             </div>
-
-            <div class="col-md-6 mb-2">
-                <div class="card p-3 text-main">
-                    <h6 class=""><i class="bi bi-person-lines-fill"></i> Total Students</h6>
-                    <hr class="mt-1">
-                    <div class="card py-2 px-3 text-main mt-1">
-                        <div class="card-label" style="font-size: 13px;">Number Assign Students</div>
-                        <h5 class="text-center">
-                            <i class="bi bi-people"></i>
-                            <span id="dashboard-my-student-count">0</span>
-                        </h5>
-                    </div>
-                </div>
+            <div class="row g-4 mt-2">
+                <div class="col-md-6"><div class="stats-card"><div class="stats-header">Total Sections</div><div class="stats-body"><div class="stats-label">Number of Assigned Sections</div><div class="stats-count" id="dashboard-my-section-count-count">0</div></div></div></div>
+                <div class="col-md-6"><div class="stats-card"><div class="stats-header">Total Students</div><div class="stats-body"><div class="stats-label">Number Assigned Students</div><div class="stats-count" id="dashboard-my-student-count">0</div></div></div></div>
             </div>
-        </div>
+            <div class="card mt-4 p-3 shadow-sm border-0"><canvas id="passed-failed-student-chart" style="max-height: 400px;"></canvas></div>
+        <?php } ?>
 
-        <hr>
-
-        <canvas id="passed-failed-student-chart"></canvas>
-
-    <?php } ?>
-
-
-    <?php if ($user['role'] == "super_admin") { ?>
-
-        <div class="row">
-            <div class="col-md-6 col-lg-3 mb-2">
-                <div class="card p-3 text-main">
-                    <h6 class=""><i class="bi bi-1-circle-fill"></i> Unang Markahan</h6>
-                    <hr class="mt-1">
-
-                    <div class="card py-2 px-3 text-main">
-                        <div class="card-label" style="font-size: 13px;">Videos Uploaded</div>
-                        <h5 class="text-center">
-                            <i class="bi bi-cloud-arrow-up-fill"></i>
-                            <span id="unang-markahan-videos-uploaded-count">0</span>
-                        </h5>
-                    </div>
-                </div>
+        <?php if ($user['role'] == "super_admin") { ?>
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-3"><div class="stats-card"><div class="stats-header">Unang Markahan</div><div class="stats-body"><div class="stats-label">Videos Uploaded</div><div class="stats-count" id="unang-markahan-videos-uploaded-count">0</div></div></div></div>
+                <div class="col-md-6 col-lg-3"><div class="stats-card"><div class="stats-header">Ikalawang Markahan</div><div class="stats-body"><div class="stats-label">Videos Uploaded</div><div class="stats-count" id="pangalawang-markahan-videos-uploaded-count">0</div></div></div></div>
+                <div class="col-md-6 col-lg-3"><div class="stats-card"><div class="stats-header">Ikatlong Markahan</div><div class="stats-body"><div class="stats-label">Videos Uploaded</div><div class="stats-count" id="pangatlong-markahan-videos-uploaded-count">0</div></div></div></div>
+                <div class="col-md-6 col-lg-3"><div class="stats-card"><div class="stats-header">Ika-apat na Markahan</div><div class="stats-body"><div class="stats-label">Videos Uploaded</div><div class="stats-count" id="ika-apat-na-markahan-videos-uploaded-count">0</div></div></div></div>
             </div>
-
-            <div class="col-md-6 col-lg-3 mb-2">
-                <div class="card p-3 text-main">
-                    <h6 class=""><i class="bi bi-2-circle-fill"></i> Pangalawang Markahan</h6>
-                    <hr class="mt-1">
-
-                    <div class="card py-2 px-3 text-main">
-                        <div class="card-label" style="font-size: 13px;">Videos Uploaded</div>
-                        <h5 class="text-center">
-                            <i class="bi bi-cloud-arrow-up-fill"></i>
-                            <span id="pangalawang-markahan-videos-uploaded-count"></span>
-                        </h5>
-                    </div>
-                </div>
+            <div class="row g-4 mt-2">
+                <div class="col-md-6"><div class="stats-card"><div class="stats-header">Total App Users</div><div class="stats-body"><div class="stats-label">Number of Registered Users</div><div class="stats-count" id="dashboard-total-users-count">0</div></div></div></div>
+                <div class="col-md-6"><div class="stats-card"><div class="stats-header">Total Web Users</div><div class="stats-body"><div class="stats-label">Number of Registered Users</div><div class="stats-count" id="dashboard-total-web-users-count">0</div></div></div></div>
             </div>
-
-            <div class="col-md-6 col-lg-3 mb-2">
-                <div class="card p-3 text-main">
-                    <h6 class=""><i class="bi bi-3-circle-fill"></i> Pangatlong Markahan</h6>
-                    <hr class="mt-1">
-
-                    <div class="card py-2 px-3 text-main">
-                        <div class="card-label" style="font-size: 13px;">Videos Uploaded</div>
-                        <h5 class="text-center">
-                            <i class="bi bi-cloud-arrow-up-fill"></i>
-                            <span id="pangatlong-markahan-videos-uploaded-count">0</span>
-                        </h5>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6 col-lg-3 mb-2">
-                <div class="card p-3 text-main">
-                    <h6 class=""><i class="bi bi-4-circle-fill"></i> Ika-apat Markahan</h5>
-                        <hr class="mt-1">
-
-                        <div class="card py-2 px-3 text-main">
-                            <div class="card-label" style="font-size: 13px;">Videos Uploaded</div>
-                            <h5 class="text-center">
-                                <i class="bi bi-cloud-arrow-up-fill"></i>
-                                <span id="ika-apat-na-markahan-videos-uploaded-count">0</span>
-                            </h5>
-                        </div>
-                </div>
-            </div>
-        </div>
-
-        <hr>
-
-        <div class="row">
-            <div class="col-md-6 mb-2">
-                <div class="card p-3 text-main">
-                    <h6 class=""><i class="bi bi-person-lines-fill"></i> Total App Users</h6>
-                    <hr class="mt-1">
-                    <div class="card py-2 px-3 text-main mt-1">
-                        <div class="card-label" style="font-size: 13px;">Number of Registered Users</div>
-                        <h5 class="text-center">
-                            <i class="bi bi-people"></i>
-                            <span id="dashboard-total-users-count">0</span>
-                        </h5>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6 mb-2">
-                <div class="card p-3 text-main">
-                    <h6 class=""><i class="bi bi-person-lines-fill"></i> Total Web Users</h6>
-                    <hr class="mt-1">
-                    <div class="card py-2 px-3 text-main mt-1">
-                        <div class="card-label" style="font-size: 13px;">Number of Registered Users</div>
-                        <h5 class="text-center">
-                            <i class="bi bi-people"></i>
-                            <span id="dashboard-total-web-users-count">0</span>
-                        </h5>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <hr>
-
-        <canvas id="videos-uploaded-chart"></canvas>
-
-    <?php } ?>
+            <div class="card mt-4 p-3 shadow-sm border-0"><h5 class="mb-3 text-main fw-bold" style="color: #880f0b;">Uploaded Videos Analytics</h5><canvas id="videos-uploaded-chart" style="max-height: 400px;"></canvas></div>
+        <?php } ?>
+    </main>
 </div>
 
-
-<?php
-include("components/footer-scripts.php");
-?>
-
-<!-- script here -->
-
+<?php include("components/footer-scripts.php"); ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     $(document).ready(function() {
+        console.log("Dashboard Loaded");
 
+        // --- SIDEBAR TOGGLE ---
+        $(document).off('click', '.sidebar-toggle');
+        $(document).on('click', '.sidebar-toggle', function(e) {
+            e.preventDefault();
+            e.stopPropagation(); 
+            $(".dashboard-wrapper").toggleClass("toggled");
+        });
+
+        // ============================================
+        // === DOWNLOAD LOGIC ===
+        // ============================================
+        $("#btnDownload").on("click", function(e) {
+            e.preventDefault();
+            const userId = $("#hidden_user_id").val();
+            const isSuperAdmin = $("#hidden_is_super_admin").val();
+            window.location.href = `../backend/api/web/export_dashboard.php?user_id=${userId}&is_admin=${isSuperAdmin}`;
+        });
+
+        $("#btnDownloadStudentData").on("click", function(e) {
+            e.preventDefault();
+            const userId = $("#hidden_user_id").val();
+            const isSuperAdmin = $("#hidden_is_super_admin").val();
+            window.location.href = `../backend/api/web/export_students.php?teacher_id=${userId}&is_admin=${isSuperAdmin}`;
+        });
+
+        // --- LOAD DASHBOARD DATA ---
         const hidden_user_id = $("#hidden_user_id").val();
         const is_super_admin = $("#hidden_is_super_admin").val();
 
         const loadDashBoard = () => {
-
-            var teacherChart = null;
-            var superAdminChart = null;
-
-            var unangMarkahanPassedCount = 0;
-            var pangalawangMarkahanPassedCount = 0;
-            var pangatlongMarkahanPassedCount = 0;
-            var ikaApatNaMarkahanPassedCount = 0;
-
-            var unangMarkahanFailedCount = 0;
-            var pangalawangMarkahanFailedCount = 0;
-            var pangatlongMarkahanFailedCount = 0;
-            var ikaApatNaMarkahanFailedCount = 0;
-
-
-            console.log(hidden_user_id);
-            console.log(is_super_admin);
-
-            $.ajax({
-                type: "POST",
-                url: "../backend/api/web/home.php",
-                data: {
-                    requestType: "LoadDashboard",
-                    hidden_user_id,
-                    is_super_admin
-                },
+             $.ajax({
+                type: "POST", url: "../backend/api/web/home.php",
+                data: { requestType: "LoadDashboard", hidden_user_id, is_super_admin },
                 success: function(response) {
-                    let res = JSON.parse(response);
+                    try {
+                        let res = JSON.parse(response);
+                        
+                        // === SUPER ADMIN DASHBOARD ===
+                        if (is_super_admin == "true") {
+                             $("#unang-markahan-videos-uploaded-count").text(res.data.vid_uploaded_count[0]?.video_count || 0);
+                            $("#pangalawang-markahan-videos-uploaded-count").text(res.data.vid_uploaded_count[1]?.video_count || 0);
+                            $("#pangatlong-markahan-videos-uploaded-count").text(res.data.vid_uploaded_count[2]?.video_count || 0);
+                            $("#ika-apat-na-markahan-videos-uploaded-count").text(res.data.vid_uploaded_count[3]?.video_count || 0);
+                            $("#dashboard-total-users-count").text(res.data.users_count.count);
+                            $("#dashboard-total-web-users-count").text(res.data.web_users_count.count);
+                            
+                            var vidUploadedCtx = document.getElementById('videos-uploaded-chart').getContext('2d');
+                            if (Chart.getChart("videos-uploaded-chart")) { Chart.getChart("videos-uploaded-chart").destroy(); }
+                            
+                            var gradient = vidUploadedCtx.createLinearGradient(0, 0, 0, 400);
+                            gradient.addColorStop(0, '#a71b1b'); gradient.addColorStop(1, '#880f0b');
+                            
+                            new Chart(vidUploadedCtx, { 
+                                type: 'bar', 
+                                data: { 
+                                    labels: ['Unang', 'Pangalawa', 'Pangatlo', 'Ika-apat'], 
+                                    datasets: [{ 
+                                        label: 'Uploaded Videos', 
+                                        data: [res.data.vid_uploaded_count[0]?.video_count||0, res.data.vid_uploaded_count[1]?.video_count||0, res.data.vid_uploaded_count[2]?.video_count||0, res.data.vid_uploaded_count[3]?.video_count||0], 
+                                        backgroundColor: gradient 
+                                    }] 
+                                } 
+                            });
 
+                        // === TEACHER DASHBOARD ===
+                        } else {
+                            $("#dashboard-my-section-count-count").text(res.data.section_count);
+                            $("#dashboard-my-student-count").text(res.data.total_students);
+                            
+                            // Initialize data arrays for the chart (ensures correct order)
+                            let passedData = [0, 0, 0, 0];
+                            let failedData = [0, 0, 0, 0];
+                            const levels = ['unang', 'pangalawang', 'pangatlong', 'ika-apat-na'];
 
-                    if (is_super_admin == "true") {
-                        // -------
-                        let unangMarkahanVideosUploadedCount = res.data.vid_uploaded_count[0].video_count;
-                        let pangalawangMarkahanVideosUploadedCount = res.data.vid_uploaded_count[1].video_count;
-                        let pangatlongMarkahanVideosUploadedCount = res.data.vid_uploaded_count[2].video_count;
-                        let ikaApatNaMarkahanVideosUploadedCount = res.data.vid_uploaded_count[3].video_count;
+                            // Process Level Stats
+                            if(res.data.level_stats && res.data.level_stats.length > 0) {
+                                res.data.level_stats.forEach((stat) => {
+                                    // 1. Fill Card Data & Links
+                                    let levelIndex = stat.level - 1; // 1->0, 2->1, etc.
+                                    let levelKey = levels[levelIndex];
 
-                        $("#unang-markahan-videos-uploaded-count").text(unangMarkahanVideosUploadedCount);
-                        $("#pangalawang-markahan-videos-uploaded-count").text(pangalawangMarkahanVideosUploadedCount);
-                        $("#pangatlong-markahan-videos-uploaded-count").text(pangatlongMarkahanVideosUploadedCount);
-                        $("#ika-apat-na-markahan-videos-uploaded-count").text(ikaApatNaMarkahanVideosUploadedCount);
-                        // -------
+                                    if(levelKey) {
+                                        $(`#${levelKey}-markahan-no-of-passed-student`).text(stat.passed_count);
+                                        $(`#${levelKey}-markahan-no-of-failed-student`).text(stat.failed_count);
+                                        
+                                        // --- UPDATED LINK HERE ---
+                                        // Changed from level_details.php to taken_assessments.php
+                                        $(`#link-${levelKey}-markahan`).attr('href', `taken_assessments.php?level=${stat.id}`);
+                                    }
 
-                        // -------
-                        $("#dashboard-total-users-count").text(res.data.users_count.count);
-                        $("#dashboard-total-web-users-count").text(res.data.web_users_count.count);
-                        // -------
-
-                        // cchart
-                        var vidUploadedCtx = document.getElementById('videos-uploaded-chart').getContext('2d');
-
-                        if (superAdminChart) {
-                            myChart.destroy();
-                        }
-
-                        superAdminChart = new Chart(vidUploadedCtx, {
-                            type: 'line',
-                            data: {
-                                labels: ['Unang Markahan', 'Pangalawang Markahan', 'Pangatlong Markahan', 'Ika-apat Markahan'],
-                                datasets: [{
-                                    label: 'Uploaded Videos',
-                                    // data: [12, 19, 3, 5],
-                                    data: [unangMarkahanVideosUploadedCount, pangalawangMarkahanVideosUploadedCount, pangatlongMarkahanVideosUploadedCount, ikaApatNaMarkahanVideosUploadedCount],
-                                    borderColor: 'blue',
-                                    backgroundColor: 'rgba(0, 0, 255, 0.1)',
-                                    fill: true
-                                }]
+                                    // 2. Fill Chart Data Arrays (safely)
+                                    if(levelIndex >= 0 && levelIndex < 4) {
+                                        passedData[levelIndex] = stat.passed_count;
+                                        failedData[levelIndex] = stat.failed_count;
+                                    }
+                                });
                             }
-                        });
 
-
-                    } else {
-                        // 
-                        $("#link-unang-markahan").attr("href", "taken_assessments.php?level=" + res.data.level_stats[0].id);
-                        $("#link-pangalawang-markahan").attr("href", "taken_assessments.php?level=" + res.data.level_stats[1].id);
-                        $("#link-pangatlong-markahan").attr("href", "taken_assessments.php?level=" + res.data.level_stats[2].id);
-                        $("#link-ika-apat-na-markahan").attr("href", "taken_assessments.php?level=" + res.data.level_stats[3].id);
-
-
-                        // teacher
-                        unangMarkahanFailedCount = res.data.level_stats[0].failed_count;
-                        unangMarkahanPassedCount = res.data.level_stats[0].passed_count;
-                        $("#unang-markahan-no-of-failed-student").text(unangMarkahanFailedCount);
-                        $("#unang-markahan-no-of-passed-student").text(unangMarkahanPassedCount);
-
-                        pangalawangMarkahanFailedCount = res.data.level_stats[1].failed_count;
-                        pangalawangMarkahanPassedCount = res.data.level_stats[1].passed_count;
-                        $("#pangalawang-markahan-no-of-failed-student").text(pangalawangMarkahanFailedCount);
-                        $("#pangalawang-markahan-no-of-passed-student").text(pangalawangMarkahanPassedCount);
-
-                        pangatlongMarkahanFailedCount = res.data.level_stats[2].failed_count;
-                        pangatlongMarkahanPassedCount = res.data.level_stats[2].passed_count;
-                        $("#pangatlong-markahan-no-of-failed-student").text(pangatlongMarkahanFailedCount);
-                        $("#pangatlong-markahan-no-of-passed-student").text(pangatlongMarkahanPassedCount);
-
-                        ikaApatNaMarkahanFailedCount = res.data.level_stats[3].failed_count;
-                        ikaApatNaMarkahanPassedCount = res.data.level_stats[3].passed_count;
-                        $("#ika-apat-na-markahan-no-of-failed-student").text(ikaApatNaMarkahanFailedCount);
-                        $("#ika-apat-na-markahan-no-of-passed-student").text(ikaApatNaMarkahanPassedCount);
-
-
-                        // ------
-                        var unangMarkahanVideoCompletionCount = res.data.completed_stats[0].count;
-                        $("#unang-markahan-student-video-completion-count").text(unangMarkahanVideoCompletionCount);
-
-                        var pangalawangMarkahanVideoCompletionCount = res.data.completed_stats[1].count;
-                        $("#pangalawang-markahan-student-video-completion-count").text(pangalawangMarkahanVideoCompletionCount);
-
-                        var pangatlongMarkahanVideoCompletionCount = res.data.completed_stats[2].count;
-                        $("#pangatlong-markahan-student-video-completion-count").text(pangatlongMarkahanVideoCompletionCount);
-
-                        var ikaApatNaMarkahanVideoCompletionCount = res.data.completed_stats[3].count;
-                        $("#ika-apat-na-markahan-student-video-completion-count").text(ikaApatNaMarkahanVideoCompletionCount);
-
-
-
-                        $("#dashboard-my-section-count-count").text(res.data.section_count);
-                        $("#dashboard-my-student-count").text(res.data.total_students);
-
-
-
-                        // chart
-
-                        var passFailedCtx = document.getElementById('passed-failed-student-chart').getContext('2d');
-
-                        if (teacherChart) {
-                            myChart.destroy();
-                        }
-
-                        teacherChart = new Chart(passFailedCtx, {
-                            type: 'line',
-                            data: {
-                                labels: ['Unang Markahan', 'Pangalawang Markahan', 'Pangatlong Markahan', 'Ika-apat Markahan'],
-                                datasets: [{
-                                    label: 'Passed',
-                                    // data: [12, 19, 3, 5],
-                                    data: [unangMarkahanPassedCount, pangalawangMarkahanPassedCount, pangatlongMarkahanPassedCount, ikaApatNaMarkahanPassedCount],
-                                    borderColor: 'blue',
-                                    backgroundColor: 'rgba(0, 0, 255, 0.1)',
-                                    fill: true
-                                }, {
-                                    label: 'Failed',
-                                    // data: [4, 15, 10, 15],
-                                    data: [unangMarkahanFailedCount, pangalawangMarkahanFailedCount, pangatlongMarkahanFailedCount, ikaApatNaMarkahanFailedCount],
-                                    borderColor: 'green',
-                                    backgroundColor: 'rgba(0, 255, 21, 0.1)',
-                                    fill: true
-                                }]
+                            // Process Completed Stats
+                            if(res.data.completed_stats) {
+                                res.data.completed_stats.forEach((stat) => {
+                                    let levelKey = levels[stat.level - 1];
+                                    if(levelKey) {
+                                        $(`#${levelKey}-markahan-student-video-completion-count`).text(stat.count);
+                                    }
+                                });
                             }
-                        });
-                    }
 
+                            // --- BAR GRAPH LOGIC ---
+                            var canvas = document.getElementById('passed-failed-student-chart');
+                            if (canvas) {
+                                var passFailedCtx = canvas.getContext('2d');
+                                
+                                // Safely destroy previous instance
+                                try {
+                                    if (Chart.getChart("passed-failed-student-chart")) { 
+                                        Chart.getChart("passed-failed-student-chart").destroy(); 
+                                    }
+                                } catch (err) { console.warn("Chart destroy error ignored:", err); }
+
+                                new Chart(passFailedCtx, { 
+                                    type: 'bar', // Set to Bar
+                                    data: { 
+                                        labels: ['Unang', 'Pangalawa', 'Pangatlo', 'Ika-apat'], 
+                                        datasets: [
+                                            { 
+                                                label: 'Passed', 
+                                                data: passedData, 
+                                                borderColor: 'blue', 
+                                                backgroundColor: 'rgba(54, 162, 235, 0.7)', // Blue bars
+                                                borderWidth: 1
+                                            }, 
+                                            { 
+                                                label: 'Failed', 
+                                                data: failedData, 
+                                                borderColor: 'green', 
+                                                backgroundColor: 'rgba(75, 192, 192, 0.7)', // Green bars
+                                                borderWidth: 1
+                                            }
+                                        ] 
+                                    },
+                                    options: {
+                                        responsive: true,
+                                        scales: {
+                                            y: {
+                                                beginAtZero: true,
+                                                ticks: { stepSize: 1 }
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                    } catch(e) { console.error("Parse Error", e); }
                 }
             });
-
         }
-
-
-
-        $("#btnDownload").click(function() {
-            $.ajax({
-                type: "POST",
-                url: "../backend/api/web/home.php",
-                data: {
-                    requestType: "LoadDashboard",
-                    hidden_user_id,
-                    is_super_admin
-                },
-                success: function(response) {
-                    let res = JSON.parse(response);
-
-                    if (is_super_admin == "true") {
-
-                        var vidUploaded = res.data.vid_uploaded_count;
-
-                        var usersCount = res.data.users_count.count;
-                        var webUsersCount = res.data.web_users_count.count;
-
-                        var unang = vidUploaded.find(x => x.level == 1)?.video_count ?? 0;
-                        var pangalawa = vidUploaded.find(x => x.level == 2)?.video_count ?? 0;
-                        var pangatlo = vidUploaded.find(x => x.level == 3)?.video_count ?? 0;
-                        var ikaapat = vidUploaded.find(x => x.level == 4)?.video_count ?? 0;
-
-                        let headers = [
-                            "unang_markahan_uploaded_video",
-                            "pangalawang_markahan_uploaded_video",
-                            "pangatlong_markahan_uploaded_video",
-                            "ikaapat_markahan_uploaded_video",
-                            "total_app_users",
-                            "total_web_users"
-                        ];
-
-                        let row = [unang, pangalawa, pangatlo, ikaapat, usersCount, webUsersCount];
-
-                        let csvContent = "data:text/csv;charset=utf-8," +
-                            headers.join(",") + "\n" +
-                            row.join(",");
-
-                        const encodedUri = encodeURI(csvContent);
-                        const link = document.createElement("a");
-                        link.setAttribute("href", encodedUri);
-                        link.setAttribute("download", "dashboard_data_super_admin.csv");
-                        document.body.appendChild(link);
-                        link.click();
-                    } else {
-                        var unangFailed = res.data.level_stats[0].failed_count;
-                        var unangPassed = res.data.level_stats[0].passed_count;
-
-                        var pangalawaFailed = res.data.level_stats[1].failed_count;
-                        var pangalawaPassed = res.data.level_stats[1].passed_count;
-
-                        var pangatloFailed = res.data.level_stats[2].failed_count;
-                        var pangatloPassed = res.data.level_stats[2].passed_count;
-
-                        var ikaapatFailed = res.data.level_stats[3].failed_count;
-                        var ikaapatPassed = res.data.level_stats[3].passed_count;
-
-                        var unangVideoComplete = res.data.completed_stats[0].count;
-                        var pangalawaVideoComplete = res.data.completed_stats[1].count;
-                        var pangatloVideoComplete = res.data.completed_stats[2].count;
-                        var ikaapatVideoComplete = res.data.completed_stats[3].count;
-
-                        var sectionCount = res.data.section_count;
-                        var totalStudents = res.data.total_students;
-
-                        let headers = [
-                            "unang_failed", "unang_passed", "unang_video_complete",
-                            "pangalawa_failed", "pangalawa_passed", "pangalawa_video_complete",
-                            "pangatlo_failed", "pangatlo_passed", "pangatlo_video_complete",
-                            "ikaapat_failed", "ikaapat_passed", "ikaapat_video_complete",
-                            "total_sections", "total_students"
-                        ];
-
-                        let row = [
-                            unangFailed, unangPassed, unangVideoComplete,
-                            pangalawaFailed, pangalawaPassed, pangalawaVideoComplete,
-                            pangatloFailed, pangatloPassed, pangatloVideoComplete,
-                            ikaapatFailed, ikaapatPassed, ikaapatVideoComplete,
-                            sectionCount, totalStudents
-                        ];
-
-                        let csvContent = "data:text/csv;charset=utf-8," +
-                            headers.join(",") + "\n" +
-                            row.join(",");
-
-                        const encodedUri = encodeURI(csvContent);
-                        const link = document.createElement("a");
-                        link.setAttribute("href", encodedUri);
-                        link.setAttribute("download", "dashboard_data_teacher.csv");
-                        document.body.appendChild(link);
-                        link.click();
-                    }
-                }
-            });
-        });
-
-        $("#btnDownloadStudentData").click(function() {
-
-            $.ajax({
-                type: "POST",
-                url: "../backend/api/web/students.php",
-                data: {
-                    requestType: "GetStudents",
-                    auth_user_id: hidden_user_id,
-                    is_super_admin,
-                    section_id: ""
-                },
-                success: function(response) {
-                    const res = JSON.parse(response);
-                    const data = res.data;
-
-                    if (!Array.isArray(data) || data.length === 0) {
-                        console.error("No data found to export.");
-                        return;
-                    }
-
-                    const headers = Object.keys(data[0]);
-
-                    const rows = data.map(obj =>
-                        headers.map(h => JSON.stringify(obj[h] ?? "")).join(",")
-                    );
-
-                    const csvContent = [headers.join(","), ...rows].join("\n");
-
-                    const blob = new Blob([csvContent], {
-                        type: "text/csv;charset=utf-8;"
-                    });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement("a");
-                    link.setAttribute("href", url);
-                    link.setAttribute("download", "data.csv");
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }
-            });
-
-        });
-
-
-
-        setInterval(loadDashBoard, 3000);
-
+        
         loadDashBoard();
+        setInterval(loadDashBoard, 5000); // Increased interval to 5s to reduce flickering
     });
 </script>
-
-<?php
-include("components/footer.php");
+<?php include("components/footer.php"); ?>

@@ -1,87 +1,99 @@
 $(document).ready(function () {
-  const level_id = $("#hidden_level_id").val();
-  const firstFilterValue = "ALL";
+    const auth_user_id = $("#hidden_user_id").val();
+    const level_id = $("#hidden_level_id").val();
 
-  const showAlert = (type, message) => {
-    $("#alert").removeClass().addClass(`alert ${type}`).text(message).show();
+    const loadTakenAssessments = () => {
+        // 1. Set Loading State (Just Icon, No Text)
+        $("#taken-assessments-list").html(`
+            <tr>
+                <td colspan="5" class="text-center py-5">
+                    <div class="spinner-border text-secondary" role="status" style="width: 2rem; height: 2rem; border-width: 0.25em;"></div>
+                </td>
+            </tr>
+        `);
 
-    setTimeout(() => {
-      $("#alert").fadeOut("slow", function () {
-        $(this).removeClass().text("").hide();
-      });
-    }, 2000);
-  };
+        $.ajax({
+            type: "POST",
+            url: "../backend/api/web/taken_assessment.php",
+            data: { 
+                requestType: "GetTakenAssessments", 
+                level_id: level_id,
+                teacher_id: auth_user_id,
+                filter: "all" 
+            },
+            dataType: "json", 
+            success: function (response) {
+                let data = response.data ? response.data : response; 
+                if (Array.isArray(response)) {
+                    data = response;
+                }
 
-  const loadTakenAssessment = (filter) => {
-    $.ajax({
-      type: "POST",
-      url: "../backend/api/web/taken_assessment.php",
-      data: { requestType: "GetTakenAssessments", filter, level_id },
-      success: function (response) {
-        let res = JSON.parse(response);
+                let html = "";
 
-        if (res.status === "success") {
-          const assessments = res.data;
-          let rowsHtml = "";
+                if (!data || data.length === 0) {
+                    html = `
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted fw-bold">
+                                No assessments found.
+                            </td>
+                        </tr>`;
+                } else {
+                    data.forEach((item) => {
+                        let id = item.id;
+                        let title = item.assessment_title || item.title || "Untitled Assessment";
+                        let studentName = item.student_name || item.fullname || "Unknown Student";
+                        let score = item.score || 0;
+                        let total = item.total_items || 0;
+                        
+                        // Date Formatting
+                        let dateTaken = "N/A";
+                        if (item.created_at) {
+                            let dateObj = new Date(item.created_at);
+                            if (!isNaN(dateObj)) {
+                                dateTaken = dateObj.toLocaleDateString('en-US', { 
+                                    year: 'numeric', month: 'short', day: 'numeric' 
+                                });
+                            }
+                        }
 
-          assessments.forEach((assessment) => {
-            rowsHtml += `
-                <tr>
-                  <td>${assessment.lrn}</td>
-                  <td>${assessment.first_name + " " + assessment.last_name}</td>
-                  <td>${assessment.points}</td>
-                  <td>${assessment.total}</td>
-                  <td>${assessment.created_at}</td>
-                  <td>${assessment.total_attempts}</td>
-                  <td></td>
-                </tr>
-              `;
-          });
+                        // Status Color
+                        let scorePercent = total > 0 ? (score / total) * 100 : 0;
+                        let badgeClass = scorePercent >= 75 ? "bg-success" : (scorePercent >= 50 ? "bg-warning text-dark" : "bg-danger");
 
-          $("#taken-assessment-table-tbody").html(rowsHtml);
-        } else {
-          $("#taken-assessment-table-tbody").html(
-            `<tr><td colspan="5">Failed to load assessment: ${res.message}</td></tr>`
-          );
-        }
-      },
-      error: function () {
-        $("#taken-assessment-table-tbody").html(
-          `<tr><td colspan="5">Server error while loading assessment.</td></tr>`
-        );
-      },
-    });
-  };
+                        // 5-Column Row (Matches PHP Header)
+                        html += `
+                        <tr>
+                            <td class="fw-bold text-dark">${title}</td>
+                            <td class="fw-semibold text-secondary">${studentName}</td>
+                            <td class="text-date">${dateTaken}</td>
+                            <td>
+                                <span class="badge ${badgeClass} rounded-pill px-3">
+                                    ${score} / ${total}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <a href="view_result.php?id=${id}" class="btn-action-red">
+                                    <i class="bi bi-eye-fill"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        `;
+                    });
+                }
+                $("#taken-assessments-list").html(html);
+            },
+            error: function (xhr, status, error) {
+                console.error("AJAX Error:", xhr.responseText);
+                $("#taken-assessments-list").html(`
+                    <tr>
+                        <td colspan="5" class="text-center text-danger py-4 fw-bold">
+                            <i class="bi bi-exclamation-circle me-2"></i> Failed to load data.
+                        </td>
+                    </tr>
+                `);
+            },
+        });
+    };
 
-  $("#filter").change(function (e) {
-    e.preventDefault();
-    loadTakenAssessment($(this).val());
-  });
-
-  $("#download-csv").click(function () {
-    let csv = [];
-    let rows = $("#taken-assessment-table tr");
-
-    rows.each(function () {
-      let cols = $(this).find("th, td");
-      let row = [];
-
-      cols.each(function () {
-        let text = $(this).text().trim().replace(/"/g, '""'); // escape quotes
-        row.push('"' + text + '"');
-      });
-
-      csv.push(row.join(","));
-    });
-
-    let csvString = csv.join("\n");
-    let blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-    let link = document.createElement("a");
-
-    link.href = URL.createObjectURL(blob);
-    link.download = "taken_assessments.csv";
-    link.click();
-  });
-
-  loadTakenAssessment(firstFilterValue);
+    loadTakenAssessments();
 });

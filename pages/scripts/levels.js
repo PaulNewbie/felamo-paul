@@ -1,75 +1,82 @@
 $(document).ready(function () {
-  const auth_user_id = $("#hidden_user_id").val();
+    const auth_user_id = $("#hidden_user_id").val();
 
-  const loadAntas = () => {
-    $.ajax({
-      type: "POST",
-      url: "../backend/api/web/levels.php",
-      data: { requestType: "GetLevels", auth_user_id },
-      success: function (response) {
-        let res = JSON.parse(response);
-        console.log(res);
+    const loadAntas = () => {
+        $.ajax({
+            type: "POST",
+            url: "../backend/api/web/levels.php",
+            data: { requestType: "GetLevels", auth_user_id },
+            success: function (response) {
+                let res = JSON.parse(response);
 
-        if (res.status === "success") {
-          let levels = res.data;
-          let html = "";
+                if (res.status === "success") {
+                    let levels = res.data;
+                    let html = "";
 
-          if (levels.length === 0) {
-            html = `<tr><td colspan="2" class="text-center text-muted">Walang antas.</td></tr>`;
-          } else {
-            levels.forEach((level) => {
-              switch (level.level) {
-                case 1:
-                  markahan = "Unang markahan";
-                  break;
-                case 2:
-                  markahan = "Pangalawang markahan";
-                  break;
-                case 3:
-                  markahan = "Pangatlong markahan";
-                  break;
-                case 4:
-                  markahan = "Ika-apat na markahan";
-                  break;
-                default:
-                  markahan = "";
-              }
+                    if (levels.length === 0) {
+                        html = `
+                            <div class="p-4 text-center text-muted">
+                                Walang antas na nahanap.
+                            </div>`;
+                    } else {
+                        levels.forEach((level) => {
+                            let markahanName = "";
+                            
+                            // Determine Label
+                            switch (level.level) {
+                                case 1: markahanName = "Unang Markahan"; break;
+                                case 2: markahanName = "Pangalawang Markahan"; break;
+                                case 3: markahanName = "Pangatlong Markahan"; break;
+                                case 4: markahanName = "Ika-apat na Markahan"; break;
+                                default: markahanName = "Markahan " + level.level;
+                            }
 
-              html += `
-                  <tr>
-                    <td>${markahan}</td>
-                    <td>
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-main text-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Actions
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item text-main" href='level_details.php?level=${level.id}'>View Details</a></li>
-                                <li><a class="dropdown-item" href='create_assessment.php?level=${level.id}'>Create Assessment</a></li>
-                                <li><a class="dropdown-item" href='taken_assessments.php?level=${level.id}'>View Taken Assessments</a></li>
-                            </ul>
-                        </div>
-                    </td>
+                            // Generate the List Item HTML
+                            html += `
+                                <div class="markahan-item">
+                                    <span class="markahan-title">${markahanName}</span>
+                                    
+                                    <div class="dropdown">
+                                        <button class="btn-action-red dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            Action
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                                            
+                                            <li>
+                                                <a class="dropdown-item" href="level_details.php?level=${level.id}">
+                                                    <i class="bi bi-eye me-2"></i> View Details
+                                                </a>
+                                            </li>
 
-                  </tr>
-                `;
-            });
-          }
+                                            <li>
+                                                <a class="dropdown-item" href="create_assessment.php?level=${level.id}">
+                                                    <i class="bi bi-pencil-square me-2"></i> Create Assessment
+                                                </a>
+                                            </li>
 
-          $("#antas-table-tbody").html(html);
-        } else {
-          $("#antas-table-tbody").html(
-            `<tr><td colspan="2">Failed to load levels.</td></tr>`
-          );
-        }
-      },
-      error: function () {
-        $("#antas-table-tbody").html(
-          `<tr><td colspan="2">Server error.</td></tr>`
-        );
-      },
-    });
-  };
+                                            <li>
+                                                <a class="dropdown-item" href="taken_assessments.php?level=${level.id}">
+                                                    <i class="bi bi-journal-check me-2"></i> View Taken Assessment
+                                                </a>
+                                            </li>
 
-  loadAntas();
+                                        </ul>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+
+                    $("#levels-container").html(html);
+                } else {
+                    $("#levels-container").html(`<div class="p-4 text-center text-danger">Failed to load levels.</div>`);
+                }
+            },
+            error: function () {
+                $("#levels-container").html(`<div class="p-4 text-center text-danger">Server error.</div>`);
+            },
+        });
+    };
+
+    loadAntas();
 });

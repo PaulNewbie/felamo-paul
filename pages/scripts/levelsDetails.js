@@ -1,178 +1,192 @@
 $(document).ready(function () {
-  const level_id = $("#hidden_level_id").val();
+    const level_id = $("#hidden_level_id").val();
 
-  const showAlert = (type, message) => {
-    $("#alert").removeClass().addClass(`alert ${type}`).text(message).show();
+    // --- LOAD ARALINS (TABLE VIEW) ---
+    const loadAralins = () => {
+        $.ajax({
+            type: "POST",
+            url: "../backend/api/web/aralin.php",
+            data: {
+                requestType: "GetAralin",
+                level_id: level_id,
+            },
+            success: function (response) {
+                let res = JSON.parse(response);
+                if (res.status === "success") {
+                    let aralins = res.data;
+                    let html = "";
 
-    setTimeout(() => {
-      $("#alert").fadeOut("slow", function () {
-        $(this).removeClass().text("").hide();
-      });
-    }, 2000);
-  };
+                    if (aralins.length === 0) {
+                        html = `
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
+                                    No lessons found. Click "New Aralin" to add one.
+                                </td>
+                            </tr>`;
+                    } else {
+                        aralins.forEach((aralin, index) => {
+                            // Calculate Aralin Number (index + 1)
+                            let lessonNum = index + 1;
+                            
+                            // Truncate summary if too long
+                            let summary = aralin.summary || "";
+                            if (summary.length > 100) summary = summary.substring(0, 100) + "...";
 
-  const loadAralins = () => {
-    $.ajax({
-      type: "POST",
-      url: "../backend/api/web/aralin.php",
-      data: { requestType: "GetAralin", level_id },
-      success: function (response) {
-        let res = JSON.parse(response);
+                            html += `
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3" 
+                                                 style="width: 40px; height: 40px; color: #a71b1b; font-weight: bold;">
+                                                ${lessonNum}
+                                            </div>
+                                            <span class="text-secondary fw-bold">Aralin ${lessonNum}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="aralin-title">${aralin.title}</div>
+                                    </td>
+                                    <td>
+                                        <div class="aralin-summary">${summary}</div>
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <div class="dropdown">
+                                            <button class="btn-action-red dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                Action
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow">
+                                                <li>
+                                                    <a class="dropdown-item edit-aralin-btn" href="#" 
+                                                       data-id="${aralin.id}" 
+                                                       data-title="${aralin.title}" 
+                                                       data-summary="${aralin.summary}" 
+                                                       data-details="${aralin.details}" 
+                                                       data-attachment="${aralin.attachment}">
+                                                       <i class="bi bi-pencil-square me-2"></i> Edit
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item text-primary" href="../backend/storage/videos/${aralin.attachment}" target="_blank">
+                                                        <i class="bi bi-play-circle me-2"></i> Preview Video
+                                                    </a>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <a class="dropdown-item text-danger delete-aralin-btn" href="#" data-id="${aralin.id}">
+                                                        <i class="bi bi-trash me-2"></i> Delete
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    }
 
-        if (res.status === "success") {
-          const aralins = res.data;
-          let rowsHtml = "";
+                    $("#antas-table-body").html(html);
+                } else {
+                    $("#antas-table-body").html('<tr><td colspan="4" class="text-center text-danger">Failed to load data.</td></tr>');
+                }
+            },
+            error: function () {
+                $("#antas-table-body").html('<tr><td colspan="4" class="text-center text-danger">Server error.</td></tr>');
+            },
+        });
+    };
 
-          aralins.forEach((aralin) => {
-            rowsHtml += `
-              <tr>
-                <td>${aralin.aralin_no}</td>
-                <td>${aralin.title}</td>
-                <td class="text-truncate" style="max-width: 200px;" title="${
-                  aralin.summary
-                }">
-                  ${aralin.summary}
-                </td>
-                <td class="text-truncate" style="max-width: 200px;" title="${
-                  aralin.details
-                }">
-                  ${aralin.details}
-                </td>
-                <td>
-                  <div class='d-flex align-items-center'>
-                    <a href="/backend/storage/videos/${
-                      aralin.attachment_filename
-                    }" target="_blank">View Videoo</a>
-                    <button class="btnEditAralin btn btn-main btn-sm text-light"
-                      data-id="${aralin.id}"
-                      data-title="${aralin.title || ""}"
-                      data-summary="${aralin.summary || ""}"
-                      data-details="${aralin.details || ""}"
-                      data-filename="${aralin.attachment_filename || ""}"
-                    >
-                      Edit
-                    </button>
-                    <a class="btn btn-secondary" href="watch_history.php?aralinId=${
-                      aralin.id
-                    }">Mga Nakapanood</a>
-                  </div>
-                </td>
-                <td>
-                </td>
-              </tr>
-            `;
-          });
+    loadAralins();
 
-          $("#antas-details-table-tbody").html(rowsHtml);
+    // --- CREATE ARALIN ---
+    $("#insert-aralin-form").submit(function (e) {
+        e.preventDefault();
+        let formData = new FormData(this);
+
+        $.ajax({
+            type: "POST",
+            url: "../backend/api/web/aralin.php",
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function (response) {
+                let res = JSON.parse(response);
+                if (res.status === "success") {
+                    alert(res.message);
+                    $("#insertAralinModal").modal("hide");
+                    $("#insert-aralin-form")[0].reset();
+                    loadAralins();
+                } else {
+                    alert(res.message);
+                }
+            },
+            error: function () {
+                alert("An error occurred.");
+            },
+        });
+    });
+
+    // --- OPEN EDIT MODAL ---
+    $(document).on("click", ".edit-aralin-btn", function (e) {
+        e.preventDefault();
+        
+        let id = $(this).data("id");
+        let title = $(this).data("title");
+        let summary = $(this).data("summary");
+        let details = $(this).data("details");
+        let attachment = $(this).data("attachment");
+
+        $("#edit-aralin-id").val(id);
+        $("#edit-aralin-title").val(title);
+        $("#edit-aralin-summary").val(summary);
+        $("#edit-aralin-details").val(details);
+
+        // Update Video Link
+        if (attachment) {
+            $("#current-video-link").attr("href", "../backend/storage/videos/" + attachment);
+            $("#current-video-link").show();
+            $("#current-video-text").text("Current video: " + attachment);
         } else {
-          $("#antas-details-table-tbody").html(
-            `<tr><td colspan="5">Failed to load aralin: ${res.message}</td></tr>`
-          );
+            $("#current-video-link").hide();
+            $("#current-video-text").text("No video attached.");
         }
-      },
-      error: function () {
-        $("#antas-details-table-tbody").html(
-          `<tr><td colspan="5">Server error while loading aralin.</td></tr>`
-        );
-      },
+
+        $("#editAralinModal").modal("show");
     });
-  };
 
-  $("#insert-aralin-form").on("submit", function (e) {
-    e.preventDefault();
+    // --- SUBMIT EDIT FORM ---
+    $("#edit-aralin-form").submit(function (e) {
+        e.preventDefault();
+        let formData = new FormData(this);
 
-    const formData = new FormData(this);
+        $.ajax({
+            type: "POST",
+            url: "../backend/api/web/aralin.php",
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function (response) {
+                let res = JSON.parse(response);
+                if (res.status === "success") {
+                    alert(res.message);
+                    $("#editAralinModal").modal("hide");
+                    loadAralins();
+                } else {
+                    alert(res.message);
+                }
+            },
+            error: function () {
+                alert("An error occurred.");
+            },
+        });
+    });
 
-    $.ajax({
-      type: "POST",
-      url: "../backend/api/web/aralin.php",
-      data: formData,
-      processData: false,
-      contentType: false,
-      success: function (response) {
-        try {
-          let res =
-            typeof response === "string" ? JSON.parse(response) : response;
-
-          if (res.status === "success") {
-            showAlert("alert-success", res.message);
-
-            loadAralins();
-
-            $("#insertAralinModal").modal("hide");
-            $("#insert-aralin-form")[0].reset();
-          } else {
-            showAlert("alert-danger", "Upload failed: " + res.message);
-          }
-        } catch (err) {
-          console.error("Invalid response:", response);
-          showAlert("alert-danger", "Unexpected error occurred.");
+    // --- DELETE HANDLER (Optional placeholder) ---
+    $(document).on("click", ".delete-aralin-btn", function(e) {
+        e.preventDefault();
+        if(confirm("Are you sure you want to delete this lesson?")) {
+            // Add delete logic here if needed (requires backend support)
+            alert("Delete functionality coming soon.");
         }
-      },
-      error: function (xhr, status, error) {
-        console.error(xhr.responseText);
-        showAlert("alert-danger", "Request failed.");
-      },
     });
-  });
-
-  $(document).on("click", ".btnEditAralin", function () {
-    const id = $(this).data("id");
-    const title = $(this).data("title");
-    const summary = $(this).data("summary");
-    const details = $(this).data("details");
-    const filename = $(this).data("filename");
-
-    $("#edit-aralin-id").val(id);
-    $("#edit-aralin-title").val(title);
-    $("#edit-aralin-summary").val(summary);
-    $("#edit-aralin-details").val(details);
-
-    $("#current-video-link").attr(
-      "href",
-      "/backend/storage/videos/" + filename
-    );
-
-    $("#editAralinModal").modal("show");
-  });
-
-  $("#edit-aralin-form").on("submit", function (e) {
-    e.preventDefault();
-
-    const formData = new FormData(this);
-
-    $.ajax({
-      type: "POST",
-      url: "../backend/api/web/aralin.php",
-      data: formData,
-      processData: false,
-      contentType: false,
-      success: function (response) {
-        try {
-          let res =
-            typeof response === "string" ? JSON.parse(response) : response;
-
-          if (res.status === "success") {
-            showAlert("alert-success", res.message);
-
-            loadAralins();
-
-            $("#editAralinModal").modal("hide");
-            $("#edit-aralin-form")[0].reset();
-          } else {
-            showAlert("alert-danger", "Upload failed: " + res.message);
-          }
-        } catch (err) {
-          console.error("Invalid response:", response);
-          showAlert("alert-danger", "Unexpected error occurred.");
-        }
-      },
-      error: function (xhr, status, error) {
-        console.error(xhr.responseText);
-        showAlert("alert-danger", "Request failed.");
-      },
-    });
-  });
-
-  loadAralins();
 });

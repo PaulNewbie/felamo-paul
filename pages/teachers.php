@@ -1,86 +1,210 @@
-<?php include("components/header.php"); ?>
+<?php
+include("components/header.php");
+$isSuperAdmin = $user['role'] === 'super_admin';
+?>
 
-<div class="container py-4">
+<input type="hidden" id="hidden_user_id" value="<?= $auth_user_id ?>">
+<input type="hidden" id="hidden_is_super_admin" value="<?= $isSuperAdmin ? 'true' : 'false' ?>">
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="text-main mb-0">
-            <i class="bi bi-person-badge-fill me-2"></i>Teachers
-        </h4>
+<style>
+    /* --- UNIFIED CSS --- */
+    .navbar { display: none !important; }
+    body { background-color: #f4f6f9; overflow-x: hidden; }
+    .dashboard-wrapper { display: flex; min-height: 100vh; width: 100%; overflow-x: hidden; }
 
-        <div class="d-flex">
-            <button class="btn btn-sm btn-main text-light me-2" data-bs-toggle="modal" data-bs-target="#insertTeacherModal">
-                <i class="bi bi-person-plus-fill me-1"></i>Add Teacher
-            </button>
+    /* SIDEBAR */
+    .sidebar { width: 280px; background: linear-gradient(180deg, #a71b1b 0%, #880f0b 100%); color: white; display: flex; flex-direction: column; padding: 20px; position: fixed; height: 100vh; z-index: 1000; left: 0; transition: all 0.3s ease; overflow: visible !important; }
+    .sidebar-profile { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.5); }
+    .sidebar-profile img { width: 80px !important; height: 80px !important; border-radius: 50%; object-fit: cover; border: 2px solid white; max-width: 100%; display: block; }
+    .sidebar-profile h5 { font-weight: bold; margin: 0; font-size: 1.2rem; text-transform: uppercase; }
+    .nav-link-custom { display: flex; align-items: center; padding: 12px 15px; color: white; text-decoration: none; font-weight: 600; margin-bottom: 10px; transition: 0.3s; border-radius: 5px; }
+    .nav-link-custom:hover { background-color: rgba(255, 255, 255, 0.2); color: white; }
+    .nav-link-custom.active { background-color: #FFC107; color: #333; }
+    .nav-link-custom i { margin-right: 15px; font-size: 1.2rem; }
+    .logout-btn { margin-top: auto; background-color: #FFC107; color: black; font-weight: bold; border: none; width: 100%; padding: 12px; border-radius: 25px; text-align: center; text-decoration: none; cursor: pointer; }
+    .logout-btn:hover { background-color: #e0a800; color: black; }
+    .sidebar-toggle { position: absolute; right: -15px; top: 50%; width: 30px; height: 60px; background-color: #FFC107; border-radius: 0 4px 4px 0; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #333; transition: right 0.3s ease; z-index: 1001; }
+    .sidebar-toggle i { transition: transform 0.3s ease; }
+    .dashboard-wrapper.toggled .sidebar { left: -280px; }
+    .dashboard-wrapper.toggled .main-content { margin-left: 0; }
+    .dashboard-wrapper.toggled .sidebar-toggle { right: -30px; }
+    .dashboard-wrapper.toggled .sidebar-toggle i { transform: rotate(180deg); }
 
-            <div class="input-group input-group-sm" style="width: 220px;">
-                <label for="CSV" class="input-group-text"><i class="bi bi-upload"></i> Import</label>
-                <input type="file" id="CSV" class="form-control" accept=".csv">
+    /* CONTENT */
+    .main-content { flex: 1; margin-left: 280px; padding: 30px 40px; transition: all 0.3s ease; }
+    .page-header { background: linear-gradient(180deg, #a71b1b 0%, #880f0b 100%); color: white; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 1.5rem; margin-bottom: 20px; text-transform: uppercase; display: flex; align-items: center; justify-content: space-between; }
+</style>
+
+<div class="dashboard-wrapper">
+    <?php include("components/sidebar.php"); ?>
+    <main class="main-content">
+        <div class="page-header">
+            <div><i class="bi bi-person-badge-fill me-2"></i> TEACHERS</div>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-sm btn-light text-main fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#insertTeacherModal">
+                    <i class="bi bi-person-plus-fill me-1"></i> Add Teacher
+                </button>
             </div>
         </div>
-    </div>
 
-    <div class="card shadow-sm rounded-3">
-        <div class="card-body p-3">
-            <div class="table-responsive">
-                <table class="table table-sm table-hover table-striped align-middle mb-0" style="font-size: 13px;">
-                    <thead class="table-light">
-                        <tr>
-                            <th><i class="bi bi-person-fill me-1"></i>Name</th>
-                            <th><i class="bi bi-envelope-fill me-1"></i>Email</th>
-                            <th><i class="bi bi-grid-1x2-fill me-1"></i>Grade</th>
-                            <th><i class="bi bi-check-circle-fill me-1"></i>Status</th>
-                            <th><i class="bi bi-gear-fill me-1"></i>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="teacher-table-tbody">
-                        <!-- Table rows go here -->
-                    </tbody>
-                </table>
+        <div id="page-alert" class="alert alert-warning d-none"></div>
+
+        <div class="card shadow-sm rounded-3">
+            <div class="card-body p-3">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover table-striped align-middle mb-0" style="font-size: 13px;">
+                        <thead class="table-light">
+                            <tr><th>Name</th><th>Email</th><th>Grade</th><th>Status</th><th>Action</th></tr>
+                        </thead>
+                        <tbody id="teacher-table-tbody">
+                            <tr><td colspan="5" class="text-center text-muted">Loading teachers...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- Modal: Insert Teacher -->
-<div class="modal fade" id="insertTeacherModal" tabindex="-1" aria-labelledby="insertTeacherModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <form id="insert-teacher-form">
-            <div class="modal-content">
-                <div class="modal-header bg-main text-white">
-                    <h5 class="modal-title" id="insertTeacherModalLabel">
-                        <i class="bi bi-person-plus-fill me-2"></i>Add New Teacher
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
+        <div class="modal fade" id="insertTeacherModal" tabindex="-1">
+            <div class="modal-dialog">
+                <form id="insert-teacher-form">
+                    <div class="modal-content">
+                        <div class="modal-header text-white" style="background: linear-gradient(180deg, #a71b1b 0%, #880f0b 100%);">
+                            <h5 class="modal-title"><i class="bi bi-person-plus-fill me-2"></i>Add New Teacher</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="modal-alert" class="alert alert-danger d-none"></div>
 
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="teacher-name" class="form-label">Name</label>
-                        <input type="text" class="form-control" id="teacher-name" name="name" required>
+                            <div class="mb-3">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" class="form-control" name="name" required placeholder="Enter Full Name">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" name="email" required placeholder="Enter Email">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Password</label>
+                                <input type="password" class="form-control" name="password" required placeholder="Enter Password">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" id="btnSaveTeacher" class="btn btn-main text-light" style="background-color: #880f0b; border: none;">Save</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        </div>
                     </div>
-
-                    <div class="mb-3">
-                        <label for="teacher-email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="teacher-email" name="email" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="teacher-password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="teacher-password" name="password" required>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-main text-light">
-                        <i class="bi bi-save me-1"></i>Save
-                    </button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                </div>
+                </form>
             </div>
-        </form>
-    </div>
+        </div>
+    </main>
 </div>
 
 <?php include("components/footer-scripts.php"); ?>
-<script src="scripts/teachers.js?v=2"></script>
+
+<script>
+    $(document).ready(function() {
+        
+        // 1. Sidebar Toggle
+        $(document).off('click', '.sidebar-toggle').on('click', '.sidebar-toggle', function() {
+            $(".dashboard-wrapper").toggleClass("toggled");
+        });
+
+        // 2. Load Teachers Logic
+        const loadTeachers = () => {
+            // WE USE ../ BECAUSE WE ARE INSIDE 'PAGES'
+            let backendUrl = "../backend/api/web/teachers.php"; 
+
+            $.ajax({
+                type: "POST",
+                url: backendUrl, 
+                data: { requestType: "GetAllTeachers" }, 
+                dataType: "json",
+                success: function(response) {
+                    if (response.status === "success") {
+                        let rows = "";
+                        if (response.data.length > 0) {
+                            response.data.forEach(t => {
+                                rows += `
+                                    <tr>
+                                        <td class="fw-bold">${t.name}</td>
+                                        <td>${t.email}</td>
+                                        <td><span class="badge bg-secondary">N/A</span></td>
+                                        <td><span class="badge bg-success">Active</span></td>
+                                        <td>
+                                            <a href="assign_sections.php?tId=${t.id}" class="btn btn-sm btn-primary">Assign</a>
+                                        </td>
+                                    </tr>`;
+                            });
+                        } else {
+                            rows = `<tr><td colspan="5" class="text-center text-muted">No teachers found.</td></tr>`;
+                        }
+                        $("#teacher-table-tbody").html(rows);
+                        $("#page-alert").addClass("d-none");
+                    } else {
+                        $("#teacher-table-tbody").html(`<tr><td colspan="5" class="text-center text-danger">${response.message}</td></tr>`);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Load Error:", xhr.responseText);
+                    $("#teacher-table-tbody").html(`<tr><td colspan="5" class="text-center text-danger">Connection Failed.</td></tr>`);
+                    if(xhr.status == 404) {
+                        $("#page-alert").removeClass("d-none").text("Error 404: File not found at '../backend/api/web/teachers.php'");
+                    } else if(xhr.status == 500) {
+                         $("#page-alert").removeClass("d-none").text("Error 500: Backend Crash. Check 'teachers.php' code.");
+                    } else {
+                         $("#page-alert").removeClass("d-none").text("Critical Error: " + error);
+                    }
+                }
+            });
+        };
+
+        // 3. Save Teacher Logic
+        $("#insert-teacher-form").on('submit', function(e) {
+            e.preventDefault();
+            
+            let btn = $("#btnSaveTeacher");
+            btn.prop("disabled", true).text("Saving...");
+            $("#modal-alert").addClass("d-none");
+
+            let formData = new FormData(this);
+            formData.append("requestType", "InsertTeacher"); 
+
+            let backendUrl = "../backend/api/web/teachers.php"; 
+
+            $.ajax({
+                type: "POST",
+                url: backendUrl, 
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    try {
+                        let res = (typeof response === 'object') ? response : JSON.parse(response);
+                        
+                        if (res.status === "success") {
+                            alert("Teacher Added Successfully!");
+                            $("#insertTeacherModal").modal("hide");
+                            $("#insert-teacher-form")[0].reset();
+                            loadTeachers(); 
+                        } else {
+                            $("#modal-alert").removeClass("d-none").text("Error: " + res.message);
+                        }
+                    } catch (e) {
+                        $("#modal-alert").removeClass("d-none").text("Server Error: Invalid response.");
+                    }
+                },
+                error: function(xhr) {
+                    $("#modal-alert").removeClass("d-none").text("Connection Failed (Status: " + xhr.status + ").");
+                },
+                complete: function() {
+                    btn.prop("disabled", false).text("Save");
+                }
+            });
+        });
+
+        // Initial Load
+        loadTeachers();
+    });
+</script>
+
 <?php include("components/footer.php"); ?>
