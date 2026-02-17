@@ -4,7 +4,6 @@ define("db_user", "devuser");
 define("db_pass", "DevPass123!");
 define("db_name", "felamo");
 
-
 // define("db_host", "localhost");
 // define("db_user", "u240756803_felamov3");
 // define("db_pass", "hehcE6-fotcab-viskaj");

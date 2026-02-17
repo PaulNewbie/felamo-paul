@@ -124,6 +124,9 @@ class AuthController extends db_connect
                     ]
                 ]);
             } else {
+                // Add this line to see it in your terminal:
+                error_log("Login failed for email: " . $email); 
+                
                 echo json_encode([
                     'status' => 'error',
                     'message' => 'Invalid email or password.'
