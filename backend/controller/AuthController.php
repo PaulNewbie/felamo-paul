@@ -108,6 +108,13 @@ class AuthController extends db_connect
             $result = $q->get_result();
             $user = $result->fetch_assoc();
 
+            // DEBUGGING BLOCKS
+            if (!$user) {
+                error_log("Login Debug: No user found with email $email OR is_active is not 1.");
+            } elseif (!password_verify($password, $user['password'])) {
+                error_log("Login Debug: Password mismatch. DB Hash: " . $user['password']);
+            }
+
             if ($user && password_verify($password, $user['password'])) {
 
                 session_start();
